@@ -4,13 +4,13 @@
 #include "../utils/MyBitMap.h"
 #include "FindReplace.h"
 #include "../utils/pagedef.h"
-#include "../fileio/FileManager.h"
+#include "fileio/FileManager.h"
 #include "../utils/MyLinkList.h"
 /*
  * BufPageManager
  * 实现了一个缓存的管理器
  */
-struct BufPageManager {
+struct BufManager {
 public:
 	int last;
 	FileManager* fileManager;
@@ -157,7 +157,7 @@ public:
 	 * 构造函数
 	 * @参数fm:文件管理器，缓存管理器需要利用文件管理器与磁盘进行交互
 	 */
-	BufPageManager(FileManager* fm) {
+	BufManager(FileManager* fm) {
 		int c = CAP;
 		int m = MOD;
 		last = -1;
