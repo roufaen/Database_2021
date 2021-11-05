@@ -153,6 +153,28 @@ public:
 	void getKey(int index, int& fileID, int& pageID) {
 		hash->getKeys(index, fileID, pageID);
 	}
+
+	/*
+	 * 下方三个函数参考FileManger.h中实现
+	 */
+	void createFile(const char* filename){
+		fileManager->createFile(filename);
+	}
+
+  	int openFile(const char* filename){
+		int fileID;
+		fileManager->openFile(filename, fileID);
+		return fileID;
+	}
+	
+  	void closeFile(int fd){
+		fileManager->closeFile(fd);
+	}
+
+	void removeFile(const char* filename){
+		fileManager->removeFile(filename);
+	}
+
 	/*
 	 * 构造函数
 	 * @参数fm:文件管理器，缓存管理器需要利用文件管理器与磁盘进行交互

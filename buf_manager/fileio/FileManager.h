@@ -32,6 +32,9 @@ private:
 		fd[fileID] = f;
 		return 0;
 	}
+	int _removeFile(const char* name) {
+		return remove(name);
+	}
 public:
 	/*
 	 * FilManager构造函数
@@ -118,6 +121,17 @@ public:
 		_openFile(name, fileID);
 		return true;
 	}
+
+	/*
+	 * @函数名removeFile
+	 * @参数name:文件名
+	 * 功能:删除文件
+	 * 返回:无返回
+	 */
+	void removeFile(const char* name) {
+		_removeFile(name);
+	}
+
 	int newType() {
 		int t = tm->findLeftOne();
 		tm->setBit(t, 0);
