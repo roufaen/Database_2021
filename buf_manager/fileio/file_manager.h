@@ -7,6 +7,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "../utils/MyHashMap.h"
+#include "../utils/MyBitMap.h"
+#include "../utils/pagedef.h"
+
 //#include "../MyLinkList.h"
 using namespace std;
 class FileManager {

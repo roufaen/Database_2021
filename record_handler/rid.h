@@ -4,6 +4,6 @@
 struct RID {
     int pageNum;
     int slotNum;
-}
+};
 
 # endif

@@ -5,6 +5,6 @@ struct FileHeader {
     int recordSize;
     int recordNum;
     int pageNum;
-}
+};
 
 # endif
