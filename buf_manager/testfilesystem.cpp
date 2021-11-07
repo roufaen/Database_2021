@@ -28,13 +28,12 @@ using namespace std;
 
 int main() {
 	MyBitMap::initConst();   //新加的初始化
-	FileManager* fm = new FileManager();
-	BufManager* bpm = new BufManager(fm);
-	fm->createFile("testfile.txt"); //新建文件
-	fm->createFile("testfile2.txt");
+	BufManager* bpm = new BufManager();
+	bpm->createFile("testfile.txt"); //新建文件
+	bpm->createFile("testfile2.txt");
 	int fileID, f2;
-	fm->openFile("testfile.txt", fileID); //打开文件，fileID是返回的文件id
-    fm->openFile("testfile2.txt", f2);
+	fileID = bpm->openFile("testfile.txt"); //打开文件，fileID是返回的文件id
+    f2 = bpm->openFile("testfile2.txt");
 	for (int pageID = 0; pageID < 1000; ++ pageID) {
 		int index;
 		//为pageID获取一个缓存页

@@ -176,11 +176,11 @@ public:
 	 * 构造函数
 	 * @参数fm:文件管理器，缓存管理器需要利用文件管理器与磁盘进行交互
 	 */
-	BufManager(FileManager* fm) {
+	BufManager() {
 		int c = CAP;
 		int m = MOD;
 		last = -1;
-		fileManager = fm;
+		fileManager = new FileManager();
 		//bpl = new MyLinkList(CAP, MAX_FILE_NUM);
 		dirty = new bool[CAP];
 		addr = new BufType[CAP];
