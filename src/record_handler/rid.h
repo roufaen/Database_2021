@@ -2,8 +2,8 @@
 # define RID_H
 
 struct RID {
-    int pageNum;
-    int slotNum;
+    int pageID;
+    int slotID;
 };
 
 # endif
