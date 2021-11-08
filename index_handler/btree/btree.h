@@ -12,6 +12,7 @@ public:
     Btree(int);
     ~Btree();
     Triple<T> search(const T item);
+    void load(const char* con);
     bool insert(const T item);
     bool remove(const T item);
     void print();

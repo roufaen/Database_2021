@@ -165,6 +165,7 @@ public:
 	}
 	
   	void closeFile(int fd){
+		writeBack(fd);
 		fileManager->closeFile(fd);
 	}
 

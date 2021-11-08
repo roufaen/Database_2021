@@ -15,8 +15,13 @@ public:
     T getKey(int);
     bool isFull();
     void destroy(BtreeNode<T>*);
-    BtreeNode();
-    BtreeNode(int);
+    BtreeNode(): maxSize(0), child(NULL), parent(NULL){}
+    BtreeNode(int size): maxSize(size), size(0), parent(NULL)
+    {
+        key = new T[size + 1];
+        child = new BtreeNode<T> *[size+1];
+        
+    };
     ~BtreeNode();
 };
 

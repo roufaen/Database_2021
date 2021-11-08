@@ -2,9 +2,14 @@
 #define INDEX_HANDLER_H
 
 #include "index_scan.h"
+#include "../buf_manager/buf_manager.h"
+#include "./btree/btree.h"
 
 class IndexHandler {
 private:
+    BufManager* bm;
+    int id;
+    Btree<int>* btree;
 
 public:
     IndexHandler();                    
