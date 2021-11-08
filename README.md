@@ -1,6 +1,7 @@
 # Project Description
 Project for Database Course, 2021 Fall.
-Author: Fuwen Luo(@roufaen), Yanyu Ren(@robinren03)
+
+Author: [@robinren03](https://github.com/robinren03), [@roufaen](https://github.com/roufaen)
 
 # Build
 ```sh
