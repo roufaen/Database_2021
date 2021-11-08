@@ -2,9 +2,13 @@
 # define FILE_HEADER_H
 
 struct FileHeader {
+    int pageNum;
     int recordSize;
     int recordNum;
-    int pageNum;
+    int recordPerPage;
+    int recordNumPageOffset;
+    int slotMapOffset;
+    int slotMapSize;
 };
 
 # endif

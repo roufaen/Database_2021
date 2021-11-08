@@ -31,9 +31,12 @@
 *.out
 *.app
 
-#VSCode, IDEA
+# Build
+build/
+
+# VSCode, IDEA
 .vscode
 .IDEA
 
-#DS_STORE
+# DS_STORE
 .DS_STORE

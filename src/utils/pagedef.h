@@ -37,7 +37,11 @@
 /*
  * 一个表中列的上限
  */
-#define MAX_COL_NUM 31
+#define MAX_COL_NUM 10
+/*
+ * 单条记录长度上限
+ */
+#define MAX_RECORD_LEN 2048
 /*
  * 数据库中表的个数上限
  */
