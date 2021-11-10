@@ -40,3 +40,6 @@ build/
 
 # DS_STORE
 .DS_STORE
+
+# data
+.dat
