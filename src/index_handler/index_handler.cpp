@@ -3,14 +3,12 @@
 #include <string>
 #include <sstream>
 
-IndexHandler::IndexHandler(){
-    bm = new BufManager();
+IndexHandler::IndexHandler(BufManager* bufManager){
+    bm = bufManager;
     id = -1;
 }
 
-IndexHandler::~IndexHandler(){
-
-}
+IndexHandler::~IndexHandler(){}
 
 int IndexHandler::createIndex(const char* filename){
     bm->createFile(filename);
@@ -25,20 +23,14 @@ int IndexHandler::destroyIndex(const char* filename){
 int IndexHandler::openIndex(const char* filename){
     if(id != -1) bm->closeFile(id);
     id = bm->openFile(filename);
-    
     return id;
 }
 
 int IndexHandler::closeIndex(){
+    bm->close();
     bm->closeFile(id);
     id = -1;
+    return 1;
 }
 
-int IndexHandler::search(int lowerBound, int upperBound, IndexScan &indexScan){
-
-}
-
-int IndexHandler::insertRecord(int key, const RID &rid){
-
-}
 
