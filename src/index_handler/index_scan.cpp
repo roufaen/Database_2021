@@ -1,11 +1,11 @@
 #include "index_scan.h"
-key_ptr IndexScan::getKey(){
+char* IndexScan::getKey(){
     RID temp = currentNode->data[currentKeyPos].keyPos;
     char* key;
-    if (! tree->keyFile->getRecord(temp, key)) {
+    if (!tree->keyFile->getRecord(temp, key)) {
         std::cerr << "Did not get the key\n";
     };
-    return make_shared<char>(key);
+    return key;
 }
 
 RID IndexScan::getValue(){
@@ -16,14 +16,14 @@ RID IndexScan::getValue(){
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentNode->data[currentKeyPos].value.pageID, index);
     }
 
-    while(currentCumulation + currentOverflowPage->recCount <= currentValuePos){
-        currentCumulation += currentOverflowPage->recCount;
+    while(currentCumulation + currentOverflowPage->recs <= currentValuePos){
+        currentCumulation += currentOverflowPage->recs;
         int index;//index is useless
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPage->nextPage, index);
     }
 
-    while(currentCumulation + currentOverflowPage->recCount > currentValuePos){
-        currentCumulation -= currentOverflowPage->recCount;
+    while(currentCumulation + currentOverflowPage->recs > currentValuePos){
+        currentCumulation -= currentOverflowPage->recs;
         int index;//index is useless
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPage->prevPage, index);
     }
@@ -40,7 +40,7 @@ void IndexScan::next(){
 void IndexScan::nextKey(){
     currentCumulation = 0;
     currentOverflowPage = nullptr;
-    int c=  currentNode-> recCount;
+    int c=  currentNode-> recs;
     if(currentKeyPos < c-1){
         currentKeyPos++;
         currentValuePos = 0;
@@ -67,7 +67,7 @@ void IndexScan::previous(){
 void IndexScan::previousKey(){
     currentCumulation = 0;
     currentOverflowPage = nullptr;
-    int c=  currentNode-> recCount;
+    int c=  currentNode-> recs;
     if(currentKeyPos){
         currentKeyPos--;
         currentValuePos = 0;
@@ -80,7 +80,7 @@ void IndexScan::previousKey(){
         }else {
             int index; //index is useless
             this->currentNode = (BPlusNode*) tree->treeFile->getPage(prevPage, index);
-            currentKeyPos = currentNode->recCount - 1;
+            currentKeyPos = currentNode->recs - 1;
             currentValuePos = 0;
         }
     }

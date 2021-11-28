@@ -6,7 +6,7 @@
 #include "../record_handler/record_handler.h"
 #include <memory>
 
-typedef std::shared_ptr<char> key_ptr;
+typedef char* key_ptr;
 
 const int maxIndexPerPage = 400;
 enum NodeType {INTERNAL, LEAF, OVERFLOW};
@@ -23,7 +23,7 @@ struct IndexRecord{
 struct BPlusNode{
     NodeType nodeType;
     int pageId;
-    int recCount;
+    int recs;
     int prevPage;
     int nextPage;   //-1 for nonexistent
     IndexRecord data[maxIndexPerPage];
@@ -32,7 +32,7 @@ struct BPlusNode{
 struct BPlusOverflowPage{
     NodeType nodeType;
     int pageId;
-    int recCount;
+    int recs;
     int prevPage;
     int nextPage;
     int fatherPage;

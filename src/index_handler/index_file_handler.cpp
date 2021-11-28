@@ -20,7 +20,7 @@ IndexFileHandler::IndexFileHandler(const char* fileName, BufManager* _bm){
         root->prevPage = 0;
         root->nodeType = LEAF;
         root->pageId = 1;
-        root->recCount = 0;
+        root->recs = 0;
         markPageDirty(index);
 
     }
