@@ -9,17 +9,17 @@ public:
     IndexScan(IndexHandler* ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
     {}
 
-    key_ptr getKey();
+    char* getKey();
     RID getValue();
     void next();
     void previous();
     void setToBegin();
     bool equals(const IndexScan &other);
     inline bool available();
-
-private:
     void nextKey();
     void previousKey();
+
+private:
     IndexHandler* tree;
     BPlusNode* currentNode;
     BPlusOverflowPage* currentOverflowPage;

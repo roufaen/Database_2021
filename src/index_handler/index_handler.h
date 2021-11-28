@@ -23,7 +23,7 @@ public:
     IndexScan lowerBound(key_ptr key);
     IndexScan upperBound(key_ptr key);
     std::vector<RID> getRIDs(key_ptr key);
-    int totalCount();
+    inline int totalCount();
     void closeIndex();
     void removeIndex();
     friend class IndexScan;
@@ -38,11 +38,11 @@ private:
     BufManager* keyFileBm;
 
     void insertIntoNonFullPage(key_ptr key, RID rid, int pageID); 
-    void splitChildPageOn(BPlusNode* node, int index); 
+    void splitPage(BPlusNode* node, int index); 
     void insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fatherPage, int x);
 
     void deleteFromLegalPage(key_ptr key, RID rid, int pageID);
-    void mergeChildPageOn(BPlusNode* node, int index);  //合并node上index和index+1号节点
+    void mergePage(BPlusNode* node, int index);  //合并node上index和index+1号节点
     void borrowFromBackward(BPlusNode* node, int index);
     void borrowFromForward(BPlusNode* node, int index);
     void deleteFromOverflowPage(key_ptr key, RID rid, BPlusNode* fatherPage, int x);
@@ -51,6 +51,9 @@ private:
     int getLesserCountIn(int pageID, key_ptr key);
     int getGreaterCountIn(int pageID, key_ptr key);
     IndexScan getLowerBound(int pageID, key_ptr key);
+
+    inline std::string getKeyFilename() {return tableName + colName + ".tree";}
+    inline std::string getTreeFilename() {return tableName + colName + ".key";}
 
 };
 
