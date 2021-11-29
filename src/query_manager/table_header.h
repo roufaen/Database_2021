@@ -10,7 +10,7 @@ struct TableHeader {
     string tableName, headerName;
     VarType varType;
     int len;
-    bool isPrimary, isForeign;
+    bool isPrimary, isForeign, permitNull;
 };
 
 # endif

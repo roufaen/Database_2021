@@ -10,8 +10,9 @@ using namespace std;
 struct Condition {
     ConditionType condType;
     TableHeader leftCol, rightCol;
-    int rightVal;
-    vector <char*> limitList;
+    int rightIntVal;
+    double rightFloatVal;
+    string rightStringVal;
 };
 
 enum ConditionType { EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, IN };

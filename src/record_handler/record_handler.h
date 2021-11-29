@@ -15,9 +15,9 @@ class RecordHandler {
 public:
     RecordHandler(BufManager *bufManager);
     ~RecordHandler();
-    int createFile(const char *fileName);                                             // 创建文件
-    int destroyFile(const char *fileName);                                            // 删除文件
-    int openFile(const char *fileName);                                               // 通过缓存管理模块打开文件，并获取其句柄
+    int createFile(string fileName);                                                  // 创建文件
+    int destroyFile(string fileName);                                                 // 删除文件
+    int openFile(string fileName);                                                    // 通过缓存管理模块打开文件，并获取其句柄
     int closeFile();                                                                  // 关闭fileID对应文件
     int getRecord(const RID &rid, char *&pData);                                      // 通过页号和槽号访问记录后，相应字节序列可以通过pData访问
     int deleteRecord(const RID &rid);                                                 // 删除特定记录

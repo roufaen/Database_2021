@@ -3,6 +3,7 @@
 
 # include "../query_manager/table.h"
 # include <vector>
+# include <string>
 
 using namespace std;
 
@@ -10,15 +11,16 @@ class SystemManager {
 public:
     SystemManager();
     ~SystemManager();
-    int createDb(const char *name);
-    int dropDb(const char *name);
-    int openDb(const char *name);
+    int createDb(string dbName);
+    int dropDb(string dbName);
+    int openDb(string dbName);
     int closeDb();
-    int createTable(const char *name, vector <TableHeader> headers);
-    int dropTable(const char *name);
-    vector <TableHeader> getHeaders(const char *name);
-    int createIndex(const char *name);
-    int dropIndex(const char *name);
+    int dbName(string& dbName);
+    int createTable(string tableName, vector <TableHeader> headers);
+    int dropTable(string tableName);
+    vector <TableHeader> getHeaders(string tableName);
+    int createIndex(string tableName, string headerName);
+    int dropIndex(string tableName, string headerName);
 };
 
 # endif

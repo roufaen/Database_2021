@@ -7,12 +7,12 @@ RecordHandler::RecordHandler(BufManager *bufManager) : bufManager(bufManager) {
 RecordHandler::~RecordHandler() {
 }
 
-int RecordHandler::createFile(const char *fileName) {
+int RecordHandler::createFile(string fileName) {
     if (this->fileID != -1) {
         return -1;
     } else {
-        this->bufManager->createFile(fileName);
-        int newFileID = this->bufManager->openFile(fileName);
+        this->bufManager->createFile(fileName.c_str());
+        int newFileID = this->bufManager->openFile(fileName.c_str());
         int idx = -1;
         BufType page = this->bufManager->allocPage(newFileID, 0, idx, false);
         this->bufManager->markDirty(idx);
@@ -31,20 +31,20 @@ int RecordHandler::createFile(const char *fileName) {
     }
 }
 
-int RecordHandler::destroyFile(const char *fileName) {
+int RecordHandler::destroyFile(string fileName) {
     if (this->fileID != -1) {
         return -1;
     } else {
-        this->bufManager->removeFile(fileName);
+        this->bufManager->removeFile(fileName.c_str());
         return 0;
     }
 }
 
-int RecordHandler::openFile(const char *fileName) {
+int RecordHandler::openFile(string fileName) {
     if (this->fileID != -1) {
         return -1;
     } else {
-        this->fileID = this->bufManager->openFile(fileName);
+        this->fileID = this->bufManager->openFile(fileName.c_str());
         int idx = -1;
         BufType headerPage = this->bufManager->getPage(fileID, 0, idx);
         memcpy(&this->header, headerPage, sizeof(this->header));

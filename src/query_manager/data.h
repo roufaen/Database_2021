@@ -6,9 +6,11 @@
 using namespace std;
 
 struct Data {
-    char *data;
+    int intVal;
+    double floatVal;
+    string stringVal;
     VarType varType;
-    int len;
+    bool isNull;
 };
 
 # endif
