@@ -42,7 +42,7 @@ public:
 ```
 
 ### 记录管理模块
-IndexHandler 接口参照文档中提供的接口设计。目前记录存储模式为定长，但在接口设计上为后续扩展为边长存储作了预留。 IndexHandler 类声明的主要部分如下，该模块已编写完毕，正在测试中。
+RecordHandler 接口参照文档中提供的接口设计。目前记录存储模式为定长，但在接口设计上为后续扩展为变长存储作了预留。 RecordHandler 类声明的主要部分如下，该模块已编写完毕，正在测试中。
 
 ```c++
 class RecordHandler {
@@ -67,6 +67,45 @@ public:
 ```
 
 ### 索引管理模块
+
+索引管理模块IndexHandler内部维护了一个B+树。为使得索引能够适应无Unique约束，B+树中还有一类Overflow节点，用于存储同一键值的不同节点信息。该模块中，键值使用记录管理模块储存，因而具有较好的变长存储拓展性。该模块已编写完毕，正在测试中。
+
+```c++
+class IndexHandler{
+public:
+    // 创建IndexHandler时自动生成或者打开文件
+    IndexHandler(std::string tableName, std::string colName, DataType type);
+    ~IndexHandler();
+	// 插入键值对
+    void insert(key_ptr key, RID rid);
+    // 移除键值对
+    void remove(key_ptr key, RID rid);
+    // 查询是否有该键值
+    bool has(key_ptr key);
+    // 查询键值等于该键值的键值对有多少个
+    int count(key_ptr key);
+    // 查询键值小于给定键值对的键值对有多少个
+    int lesserCount(key_ptr key);
+    // 查询键值大于给定键值对的键值对有多少个
+    int greaterCount(key_ptr key);
+    // 获得B+树第一个叶子节点上第一个键值对的迭代器
+    IndexScan begin();
+    // 获得恰好小于等于给定键值的键值对的迭代器
+    IndexScan lowerBound(key_ptr key);
+    // 获得恰好大于等于给定键值的键值对的迭代器
+    IndexScan upperBound(key_ptr key);
+    // 获得所有键值等于给定键值的键值对对应的记录的位置
+    std::vector<RID> getRIDs(key_ptr key);
+    // 获得键值对数量
+    inline int totalCount();
+    // 关闭索引文件
+    void closeIndex();
+    // 删除索引文件
+    void removeIndex();
+}
+```
+
+
 
 ### 查询解析模块
 为了代码编写方便，本项目新增 Table 类以实现对单张表的增删查改等基本操作。 Table 类声明的主要部分如下，该模块正在编写中。
@@ -137,7 +176,9 @@ public:
 
 ## 3. 存在的问题与困难
  - 对数据库系统的基本架构不了解，不知道从何下手。
+ - 部分模块测试困难，不知道会出现哪些特殊情况。
 
 ## 4. 对课程的建议
- - 希望能提供基本框架的参考（参考接口）。
+ - 希望能提供符合本课程验收要求的基本框架的参考（参考接口）。
+ - 希望能提供部分测试建议。
  - 希望能给出明确的最终验收的评分标准。
