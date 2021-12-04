@@ -1,4 +1,4 @@
-#include "index_scan.h"
+#include "index_handler.h"
 char* IndexScan::getKey(){
     RID temp = currentNode->data[currentKeyPos].keyPos;
     char* key;
@@ -93,10 +93,6 @@ void IndexScan::setToBegin(){
     currentOverflowPage = nullptr;
     int index; //index is useless
     currentNode = (BPlusNode*)tree->treeFile->getPage(tree->treeFile->header->firstLeaf, index);
-}
-
-inline bool IndexScan::available(){
-    return currentNode != nullptr;
 }
 
 bool IndexScan::equals(const IndexScan& that){

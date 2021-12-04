@@ -15,10 +15,10 @@ IndexFileHandler::IndexFileHandler(const char* fileName, BufManager* _bm){
         bm->markDirty(headerIndex);
 
         int index;
-        BPlusNode* root = (BPlusNode*)getPage(1, index);
+        BPlusNode* root = (BPlusNode*)bm->getPage(fileID, 1, index);
         root->nextPage = 0;
         root->prevPage = 0;
-        root->nodeType = LEAF;
+        root->nodeType = ix::LEAF;
         root->pageId = 1;
         root->recs = 0;
         markPageDirty(index);

@@ -1,23 +1,24 @@
 #include "index_handler.h"
 
-int getLen(key_ptr key, DataType _type){
+int getLen(key_ptr key, ix::DataType _type){
     switch (_type){
-        case DataType::FLOAT: return 4;
-        case DataType::INT: return 4;
-        case DataType::VARCHAR: return strlen(key);
+        case ix::DataType::FLOAT: return 4;
+        case ix::DataType::INT: return 4;
+        case ix::DataType::VARCHAR: return strlen(key);
+        default: return 0;
     }
 }
-int compare(DataType _type, key_ptr a, char* b){
+int compare(ix::DataType _type, key_ptr a, char* b){
     switch (_type) {
-        case DataType::FLOAT: {
+        case ix::DataType::FLOAT: {
             float diff = (*(float*)a - *(float*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
-        case DataType::INT: {
+        case ix::DataType::INT: {
             int diff = (*(int*)a - *(int*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
-        case DataType::VARCHAR: {
+        case ix::DataType::VARCHAR: {
             int lena = strlen(a);
             int lenb = strlen(b);
             int len = min(lena, lenb);
@@ -33,7 +34,7 @@ int compare(DataType _type, key_ptr a, char* b){
     return 0;
 }
 
-IndexHandler::IndexHandler(std::string _tableName, std::string _colName, DataType _type){
+IndexHandler::IndexHandler(std::string _tableName, std::string _colName, ix::DataType _type){
     tableName = _tableName;
     colName = _colName;
     type = _type;
@@ -42,9 +43,11 @@ IndexHandler::IndexHandler(std::string _tableName, std::string _colName, DataTyp
     treeFileBm = new BufManager();
     keyFileBm = new BufManager();
     treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), treeFileBm);
+    nowdata = new char[MAX_RECORD_LEN];
     keyFile = make_shared<RecordHandler>(keyFileBm);
-    if (keyFile->openFile(keyFileName.c_str())) { //Here maybe some bugs left, is record_hdl able to deal with no file?
-        keyFile->createFile(keyFileName.c_str());
+    if (keyFile->openFile(keyFileName.c_str())) { //Still some bugs left, is record_hdl able to deal with no file?
+        keyFile->createFile(keyFileName);
+        keyFile->openFile(keyFileName);
     }
 }
 
@@ -52,19 +55,19 @@ IndexHandler::~IndexHandler(){
     closeIndex();
     delete treeFileBm;
     delete keyFileBm;
+    delete[] nowdata;
 }
 
 void IndexHandler::insert(key_ptr key, RID rid){
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
-
     if(root->recs == maxIndexPerPage){
-        if(root->nodeType == NodeType::LEAF){
+        if(root->nodeType == ix::NodeType::LEAF){
             treeFile->markPageDirty(rootIndex);
             int index; //index is useless
             BPlusNode* newRoot = (BPlusNode*)treeFile->newPage(index);
             treeFile->header->rootPageId = newRoot->pageId;
-            newRoot->nodeType = NodeType::INTERNAL;
+            newRoot->nodeType = ix::NodeType::INTERNAL;
             newRoot->nextPage = 0;
             newRoot->prevPage = 0;
             newRoot->recs = 2;
@@ -74,7 +77,7 @@ void IndexHandler::insert(key_ptr key, RID rid){
             root->recs >>= 1;
             newNode->prevPage = root->pageId;
             newNode->recs = maxIndexPerPage - root->recs;
-            newNode->nodeType = NodeType::LEAF;
+            newNode->nodeType = ix::NodeType::LEAF;
 
             int st = root->recs;
             for(int i = root->recs; i < maxIndexPerPage; i++) 
@@ -94,12 +97,12 @@ void IndexHandler::insert(key_ptr key, RID rid){
 
             treeFile->header->lastLeaf = newNode->pageId;
             insertIntoNonFullPage(key, rid, newRoot->pageId);
-        } else if(root->nodeType == NodeType::INTERNAL){
+        } else if(root->nodeType == ix::NodeType::INTERNAL){
             treeFile->markPageDirty(rootIndex);
             int index; //index is useless
             BPlusNode* newRoot = (BPlusNode*)treeFile->newPage(index);
             treeFile->header->rootPageId = newRoot->pageId;
-            newRoot->nodeType = NodeType::INTERNAL;
+            newRoot->nodeType = ix::NodeType::INTERNAL;
             newRoot->nextPage = 0;
             newRoot->prevPage = 0;
             newRoot->recs = 2;
@@ -109,7 +112,7 @@ void IndexHandler::insert(key_ptr key, RID rid){
             root->recs >>= 1;
             newNode->prevPage = 0;
             newNode->recs = maxIndexPerPage - root->recs + 1;
-            newNode->nodeType = NodeType::INTERNAL;
+            newNode->nodeType = ix::NodeType::INTERNAL;
 
             newNode->data[0].count = 0; //Record the left most node
             newNode->data[0].keyPos = RID{0,0};
@@ -201,7 +204,7 @@ void IndexHandler::remove(key_ptr key, RID rid){
     }
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
-    if((root->nodeType == NodeType::INTERNAL) && (root->recs == 2)) {
+    if((root->nodeType == ix::NodeType::INTERNAL) && (root->recs == 2)) {
         int index;
         BPlusNode* c0 = (BPlusNode*) treeFile->getPage(root->data[0].value.pageID, index);
         BPlusNode* c1 = (BPlusNode*) treeFile->getPage(root->data[1].value.pageID, index);
@@ -253,17 +256,16 @@ void IndexHandler::removeIndex() {
 void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
     int index;
     BPlusNode* node = (BPlusNode*)(treeFile->getPage(pageID, index));
-    if (node -> nodeType == NodeType::LEAF) {
+    if (node -> nodeType == ix::NodeType::LEAF) {
         int i = 0;
         for(;i<node->recs; i++){
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
         i--;
-        char* recordData;
-        keyFile->getRecord(node->data[i].keyPos, recordData);
-        if(i>=0 && i<node->recs && compare(type, key, recordData) == 0){
+        if(i>=0) keyFile->getRecord(node->data[i].keyPos, nowdata);
+        if(i>=0 && i<node->recs && compare(type, key, nowdata) == 0){
+            printf("INSERT OVERFLOW recs %d\n", node->recs);
             insertIntoOverflowPage(key, rid, node, i);
         } else {
             RID keyPos = keyFile->insertRecord(key, getLen(key, type));
@@ -273,10 +275,9 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
             node->data[i+1].value = rid;
             node->recs++;
         }
-    } else if (node->nodeType == NodeType::INTERNAL) {
+    } else if (node->nodeType == ix::NodeType::INTERNAL) {
         int i = 1;
         for(;i<node->recs;i++) {
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
@@ -284,7 +285,6 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
         BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[i].value.pageID, index);
         if (child->recs == maxIndexPerPage) {
             splitPage(node, i);
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) >= 0) i++;
         }
@@ -301,7 +301,7 @@ void IndexHandler::splitPage(BPlusNode* node, int index) {
     int newIndex; //a useless index
     BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[index].value.pageID, childIndex);
     BPlusNode* newNode = (BPlusNode*)treeFile->newPage(newIndex);
-    if(child->nodeType == NodeType::LEAF) {
+    if(child->nodeType == ix::NodeType::LEAF) {
         if(child->nextPage > 0) {
             int nextIndex;
             BPlusNode* next = (BPlusNode*) treeFile->getPage(child->nextPage, nextIndex);
@@ -322,7 +322,7 @@ void IndexHandler::splitPage(BPlusNode* node, int index) {
             treeFile->markHeaderPageDirty();
         }
     } 
-    else if(child->nodeType == NodeType::INTERNAL){
+    else if(child->nodeType == ix::NodeType::INTERNAL){
         child->nextPage = 0;
         newNode->prevPage = 0;
         newNode->data[0].count = 0;
@@ -357,7 +357,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
     if(prCount == 1){
         int newIndex;
         BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex);
-        newOP->nodeType = NodeType::OVERFLOW;
+        newOP->nodeType = ix::NodeType::OVRFLOW;
         newOP->nextPage = 0;
         newOP->prevPage = 0;
         newOP->recs = 2;
@@ -376,7 +376,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
         if(page->recs == maxIndexPerPage) {
             int newIndex;
             BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex);
-            newOP->nodeType = NodeType::OVERFLOW;
+            newOP->nodeType = ix::NodeType::OVRFLOW;
             newOP->nextPage = 0;
             newOP->prevPage = page->pageId;
             newOP->recs = 1;
@@ -395,10 +395,9 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
 void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
     int index;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, index);
-    if(node->nodeType == NodeType::LEAF){
+    if(node->nodeType == ix::NodeType::LEAF){
         int i = 0;
         for(;i<node->recs;i++) {
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
@@ -411,10 +410,9 @@ void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
             for(;i<node->recs;i++) //WARNING: I make some modification here
                 node->data[i] = node->data[i+1];
         }
-    } else if (node->nodeType == NodeType::INTERNAL) {
+    } else if (node->nodeType == ix::NodeType::INTERNAL) {
         int i = 1;
         for(;i<node->recs;i++) {
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
@@ -438,7 +436,7 @@ void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
         node->data[i].count--;
         if (i>0) {
             child = (BPlusNode*)treeFile->getPage(node->data[i].value.pageID, childIndex); 
-            if(child->nodeType == NodeType::INTERNAL) node->data[i].keyPos = child->data[1].keyPos;
+            if(child->nodeType == ix::NodeType::INTERNAL) node->data[i].keyPos = child->data[1].keyPos;
                 else node->data[i].keyPos = child->data[0].keyPos;
         }
     }
@@ -451,7 +449,7 @@ void IndexHandler::mergePage(BPlusNode* node, int index){
     int m2Index;
     BPlusNode* m2 = (BPlusNode*)treeFile->getPage(node->data[index + 1].value.pageID, m2Index);
 
-    if(m1->nodeType == NodeType::LEAF) {
+    if(m1->nodeType == ix::NodeType::LEAF) {
         for(int i = 0; i < m2->recs; i++) m1->data[m1->recs + i] = m2->data[i];
         m1->recs += m2->recs;
 
@@ -484,7 +482,7 @@ void IndexHandler::borrowFromForward(BPlusNode* node, int index){
     BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[index].value.pageID, childIndex);
     int rightIndex;
     BPlusNode* right = (BPlusNode*)treeFile->getPage(node->data[index+1].value.pageID, rightIndex);
-    if(child->nodeType == NodeType::LEAF) {
+    if(child->nodeType == ix::NodeType::LEAF) {
         child->data[child->recs] = right->data[0];
         for(int i=0; i < right->recs - 1; i++)
             right->data[i] = right->data[i+1];
@@ -512,7 +510,7 @@ void IndexHandler::borrowFromBackward(BPlusNode* node, int index){
     int leftIndex;
     BPlusNode* left = (BPlusNode*)treeFile->getPage(node->data[index-1].value.pageID, leftIndex);
     for(int i = child->recs-1; i >= 0; i--) child->data[i+1] = child->data[i];
-    if(child->nodeType == NodeType::LEAF) {
+    if(child->nodeType == ix::NodeType::LEAF) {
         child->data[0] = left->data[left->recs-1];
     } else {
         child->data[1] = left->data[left->recs-1];
@@ -573,17 +571,15 @@ void IndexHandler::deleteFromOverflowPage(key_ptr key, RID rid, BPlusNode *fa, i
 int IndexHandler::getCountIn(int pageID, key_ptr key){
     int tempIndex;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
-    if(node->nodeType == NodeType::LEAF){
+    if(node->nodeType == ix::NodeType::LEAF){
         for(int i=0; i<node->recs; i++){
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) == 0) return node->data[i].count;
         }
         return 0; //Maybe -1 is better here
-    } else if (node->nodeType == NodeType::INTERNAL){
+    } else if (node->nodeType == ix::NodeType::INTERNAL){
         int i = 1;
         for(; i<node->recs; i++){
-            char *nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
@@ -597,18 +593,16 @@ int IndexHandler::getLesserCountIn(int pageID, key_ptr key){
     int tempIndex;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
     int ret = 0;
-    if(node->nodeType == NodeType::LEAF){
+    if(node->nodeType == ix::NodeType::LEAF){
         for(int i=0; i<node->recs; i++){
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) <= 0) return ret;
             ret += node->data[i].count;
         }
         return ret; //Maybe -1 is better here
-    } else if (node->nodeType == NodeType::INTERNAL){
+    } else if (node->nodeType == ix::NodeType::INTERNAL){
         int i = 1;
         for(; i<node->recs; i++){
-            char *nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) < 0) break;
             ret += node->data[i].count;
@@ -624,18 +618,17 @@ int IndexHandler::getGreaterCountIn(int pageID, key_ptr key){
     int tempIndex;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
     int ret = 0;
-    if(node->nodeType == NodeType::LEAF){
-        for(int i=node->recs; i>=0; i--){
-            char* nowdata;
+    if(node->nodeType == ix::NodeType::LEAF){
+        for(int i=node->recs-1; i>=0; i--){
             keyFile->getRecord(node->data[i].keyPos,nowdata);
+            int* nowd = (int*)nowdata;
             if(compare(type, key, nowdata) >= 0) return ret;
             ret += node->data[i].count;
         }
         return ret; //Maybe -1 is better here
-    } else if (node->nodeType == NodeType::INTERNAL){
+    } else if (node->nodeType == ix::NodeType::INTERNAL){
         int i = 1;
         for(; i<node->recs; i++){
-            char *nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
@@ -650,9 +643,8 @@ int IndexHandler::getGreaterCountIn(int pageID, key_ptr key){
 IndexScan IndexHandler::getLowerBound(int pageID, key_ptr key){
     int tempIndex;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
-    if(node->nodeType == NodeType::LEAF){
+    if(node->nodeType == ix::NodeType::LEAF){
         for(int i=0; i<node->recs; i++){
-            char* nowdata;
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             int result = compare(type, key, nowdata);
             if(result == 0) return IndexScan(this, node, i, 0);
@@ -662,10 +654,9 @@ IndexScan IndexHandler::getLowerBound(int pageID, key_ptr key){
             }
         }
         return IndexScan(this, node, node->recs-1, 0);
-    } else if(node->nodeType == NodeType::INTERNAL){
+    } else if(node->nodeType == ix::NodeType::INTERNAL){
         int i = 1;
         for(; i<node->recs; i++){
-            char *nowdata;
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }

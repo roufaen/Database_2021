@@ -11,7 +11,7 @@ public:
 
     BufManager* bm;
     int fileID, headerIndex, currentPage, currentIndex;
-    IndexFileHeader* header;
+    struct IndexFileHeader* header;
 
     char* newPage(int &index);
     char* getPage(int pageID, int &index);

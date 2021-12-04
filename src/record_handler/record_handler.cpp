@@ -22,6 +22,7 @@ int RecordHandler::createFile(string fileName) {
         newHeader.recordPerPage = 3;
         newHeader.recordNumPageOffset = PAGE_SIZE - 4;
         newHeader.recordSize = MAX_RECORD_LEN;
+        //newHeader.recordSize = 4;
         newHeader.slotMapOffset = MAX_RECORD_LEN * 3;
         newHeader.slotMapSize = ceil(newHeader.recordPerPage / 8.0);
         memcpy(page, &newHeader, sizeof(newHeader));
@@ -74,7 +75,7 @@ int RecordHandler::closeFile() {
     }
 }
 
-int RecordHandler::getRecord(const RID &rid, char *&pData) {
+int RecordHandler::getRecord(const RID &rid, char *pData) {
     if (this->fileID == -1 || rid.pageID <= 0 || rid.pageID > this->header.pageNum) {
         return -1;
     } else {

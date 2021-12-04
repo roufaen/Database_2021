@@ -2,7 +2,6 @@
 #define INDEX_HANDLER_H
 
 #include "ix.h"
-#include "index_scan.h"
 #include <cstring>
 #include <vector>
 
@@ -10,7 +9,7 @@ class IndexScan;
 
 class IndexHandler{
 public:
-    IndexHandler(std::string tableName, std::string colName, DataType type);
+    IndexHandler(std::string tableName, std::string colName, ix::DataType type);
     ~IndexHandler();
 
     void insert(key_ptr key, RID rid);
@@ -30,12 +29,13 @@ public:
 
 private:
     string tableName, colName;
-    DataType type;
+    ix::DataType type;
 
     shared_ptr<IndexFileHandler> treeFile = nullptr;
     shared_ptr<RecordHandler> keyFile = nullptr;
     BufManager* treeFileBm;
     BufManager* keyFileBm;
+    char* nowdata;
 
     void insertIntoNonFullPage(key_ptr key, RID rid, int pageID); 
     void splitPage(BPlusNode* node, int index); 
@@ -55,6 +55,29 @@ private:
     inline std::string getKeyFilename() {return tableName + colName + ".tree";}
     inline std::string getTreeFilename() {return tableName + colName + ".key";}
 
+};
+
+class IndexScan{
+public:
+    IndexScan(IndexHandler *ih):tree(ih){}
+    IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
+    {}
+
+    char* getKey();
+    RID getValue();
+    void next();
+    void previous();
+    void setToBegin();
+    bool equals(const IndexScan &other);
+    inline bool available(){return currentNode != nullptr;}
+    void nextKey();
+    void previousKey();
+
+private:
+    IndexHandler* tree;
+    BPlusNode* currentNode;
+    BPlusOverflowPage* currentOverflowPage;
+    int currentKeyPos, currentValuePos, currentCumulation;
 };
 
 #endif

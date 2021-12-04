@@ -9,8 +9,11 @@
 typedef char* key_ptr;
 
 const int maxIndexPerPage = 400;
-enum NodeType {INTERNAL, LEAF, OVERFLOW};
-enum DataType {INT, FLOAT, VARCHAR};
+
+namespace ix{
+    enum NodeType {INTERNAL, LEAF, OVRFLOW};
+    enum DataType {INT, FLOAT, VARCHAR};
+}
 
 struct IndexRecord{
     RID keyPos;
@@ -21,7 +24,7 @@ struct IndexRecord{
     //for intermediate page: pointer right to this page
 
 struct BPlusNode{
-    NodeType nodeType;
+    ix::NodeType nodeType;
     int pageId;
     int recs;
     int prevPage;
@@ -30,7 +33,7 @@ struct BPlusNode{
 };
 
 struct BPlusOverflowPage{
-    NodeType nodeType;
+    ix::NodeType nodeType;
     int pageId;
     int recs;
     int prevPage;

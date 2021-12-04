@@ -160,8 +160,8 @@ public:
 
   	int openFile(const char* filename){
 		int fileID;
-		if(fileManager->openFile(filename, fileID)) return -1;
-		return fileID;
+		if(fileManager->openFile(filename, fileID)) return fileID;
+		return -1;
 	}
 	
   	void closeFile(int fd){
