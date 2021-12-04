@@ -43,3 +43,7 @@ build/
 
 # data
 .dat
+
+# log
+*.key
+*.tree
