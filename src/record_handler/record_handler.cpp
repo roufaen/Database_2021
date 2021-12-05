@@ -46,6 +46,7 @@ int RecordHandler::openFile(string fileName) {
         return -1;
     } else {
         this->fileID = this->bufManager->openFile(fileName.c_str());
+        if(this->fileID == -1) return -1;
         int idx = -1;
         BufType headerPage = this->bufManager->getPage(fileID, 0, idx);
         memcpy(&this->header, headerPage, sizeof(this->header));

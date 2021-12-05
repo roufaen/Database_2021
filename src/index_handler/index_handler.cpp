@@ -45,7 +45,7 @@ IndexHandler::IndexHandler(std::string _tableName, std::string _colName, ix::Dat
     treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), treeFileBm);
     nowdata = new char[MAX_RECORD_LEN];
     keyFile = make_shared<RecordHandler>(keyFileBm);
-    if (keyFile->openFile(keyFileName.c_str())) { //Still some bugs left, is record_hdl able to deal with no file?
+    if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file?
         keyFile->createFile(keyFileName);
         keyFile->openFile(keyFileName);
     }
@@ -96,6 +96,7 @@ void IndexHandler::insert(key_ptr key, RID rid){
                 newRoot->data[1].count += newNode->data[i].count;
 
             treeFile->header->lastLeaf = newNode->pageId;
+            treeFile->header->rootPageId = newRoot->pageId;
             insertIntoNonFullPage(key, rid, newRoot->pageId);
         } else if(root->nodeType == ix::NodeType::INTERNAL){
             treeFile->markPageDirty(rootIndex);
@@ -138,6 +139,7 @@ void IndexHandler::insert(key_ptr key, RID rid){
 
             insertIntoNonFullPage(key, rid, newRoot->pageId);
 
+            treeFile->header->rootPageId = newRoot->pageId;
         }
         else{
             std::cerr << "No suck index B+ tree nodeType\n"; 
@@ -265,7 +267,6 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
         i--;
         if(i>=0) keyFile->getRecord(node->data[i].keyPos, nowdata);
         if(i>=0 && i<node->recs && compare(type, key, nowdata) == 0){
-            printf("INSERT OVERFLOW recs %d\n", node->recs);
             insertIntoOverflowPage(key, rid, node, i);
         } else {
             RID keyPos = keyFile->insertRecord(key, getLen(key, type));
@@ -281,6 +282,7 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
             keyFile->getRecord(node->data[i].keyPos, nowdata);
             if(compare(type, key, nowdata) < 0) break;
         }
+        i--;
         int index; //Useless index
         BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[i].value.pageID, index);
         if (child->recs == maxIndexPerPage) {
@@ -291,7 +293,7 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
         insertIntoNonFullPage(key, rid, node->data[i].value.pageID);
         node->data[i].count++;
     } else {
-        cerr << "UNKNOWN LEAF TYPE";
+        cerr << "UNKNOWN LEAF TYPE" << node->nodeType;
     }
     treeFile->markPageDirty(index);
 }
@@ -311,7 +313,7 @@ void IndexHandler::splitPage(BPlusNode* node, int index) {
         }
         child->nextPage = newNode->pageId;
         newNode->prevPage = child->pageId;
-        child->recs <<= 1;
+        child->recs >>= 1;
         newNode->recs = maxIndexPerPage - child->recs;
         newNode->nodeType = child->nodeType;
         for(int i=0; i<newNode->recs; i++){
@@ -328,14 +330,14 @@ void IndexHandler::splitPage(BPlusNode* node, int index) {
         newNode->data[0].count = 0;
         newNode->data[0].keyPos = RID{0,0};
         newNode->data[0].value = child->data[child->recs - 1].value;
-        child->recs <<= 1;
+        child->recs >>= 1;
         newNode->recs = maxIndexPerPage - child->recs + 1;
         newNode->nodeType = child->nodeType;
         for(int i=1; i<newNode->recs; i++){
             newNode->data[i]=child->data[i+child->recs-1];
         }
-    } else
-        cerr << "No such tree node type\n";
+    } else cerr << "No such tree node type\n";
+    
     for(int i=node->recs-1; i>index; i--){
         node->data[i+1] = node->data[i];
     }
@@ -423,12 +425,12 @@ void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
             if ((i>0) && (node->data[i-1].keyPos.pageID != 0)) {
                 int tempIndex;
                 BPlusNode* bro = (BPlusNode*)treeFile->getPage(node->data[i-1].value.pageID, tempIndex);
-                if(bro->recs > (maxIndexPerPage >> 1)) borrowFromBackward(node, i);
+                if(bro->recs > (maxIndexPerPage >> 1)) borrowFromForward(node, i);
                     else mergePage(node, --i);
             } else {
                 int tempIndex;
                 BPlusNode* bro = (BPlusNode*)treeFile->getPage(node->data[i+1].value.pageID, tempIndex);
-                if(bro->recs > (maxIndexPerPage >> 1)) borrowFromForward(node, i);
+                if(bro->recs > (maxIndexPerPage >> 1)) borrowFromBackward(node, i);
                     else mergePage(node, i);
             }
         }
@@ -477,7 +479,7 @@ void IndexHandler::mergePage(BPlusNode* node, int index){
     treeFile->markPageDirty(m2Index);
 }
 
-void IndexHandler::borrowFromForward(BPlusNode* node, int index){
+void IndexHandler::borrowFromBackward(BPlusNode* node, int index){
     int childIndex;
     BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[index].value.pageID, childIndex);
     int rightIndex;
@@ -504,7 +506,7 @@ void IndexHandler::borrowFromForward(BPlusNode* node, int index){
     treeFile->markPageDirty(rightIndex);
 }
 
-void IndexHandler::borrowFromBackward(BPlusNode* node, int index){
+void IndexHandler::borrowFromForward(BPlusNode* node, int index){
     int childIndex;
     BPlusNode* child = (BPlusNode*)treeFile->getPage(node->data[index].value.pageID, childIndex);
     int leftIndex;
