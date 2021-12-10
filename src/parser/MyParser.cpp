@@ -6,7 +6,7 @@ auto parse(std::string sSQL) {
     CommonTokenStream sTokenStream(&iLexer);
     SQLParser iParser(&sTokenStream);
     auto iTree = iParser.program();
-    MyVistor myVisitor; 
+    MyVisitor myVisitor; 
     auto iRes = myVisitor.visit(iTree);
     return iRes;  
 }
