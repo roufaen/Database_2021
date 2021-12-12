@@ -1,6 +1,7 @@
 add_subdirectory(utils)
 add_subdirectory(buf_manager)
 add_subdirectory(record_handler)
+add_subdirectory(index_handler)
 
 add_definitions(-DDEBUG)
 add_definitions("-Wall -g")

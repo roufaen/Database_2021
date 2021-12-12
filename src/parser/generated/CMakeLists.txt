@@ -1,0 +1,9 @@
+set(SOURCE
+        ${SOURCE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/SQLBaseVisitor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/SQLLexer.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/SQLParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/SQLVisitor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/MyVisitor.cpp
+        PARENT_SCOPE
+        )
