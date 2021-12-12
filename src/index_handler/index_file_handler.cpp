@@ -41,11 +41,13 @@ char* IndexFileHandler::newPage(int &index){
 }
 
 char* IndexFileHandler::getPage(int pageID, int& index){
+    bm->access(headerIndex);
     return bm->getPage(fileID, pageID, index);
 }
 
 
 void IndexFileHandler::markHeaderPageDirty(){
+    bm->access(headerIndex);
     bm->markDirty(headerIndex);
 }
 

@@ -34,28 +34,19 @@ int compare(ix::DataType _type, key_ptr a, char* b){
     return 0;
 }
 
-IndexHandler::IndexHandler(std::string _tableName, std::string _colName, ix::DataType _type){
+void IndexHandler::openIndex(std::string _tableName, std::string _colName, ix::DataType _type, BufManager* _bm){
     tableName = _tableName;
     colName = _colName;
     type = _type;
+    bm = _bm;
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
-    treeFileBm = new BufManager();
-    keyFileBm = new BufManager();
-    treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), treeFileBm);
-    nowdata = new char[MAX_RECORD_LEN];
-    keyFile = make_shared<RecordHandler>(keyFileBm);
-    if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file?
+    treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), bm);
+    keyFile = make_shared<RecordHandler>(bm);
+    if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
         keyFile->createFile(keyFileName);
         keyFile->openFile(keyFileName);
     }
-}
-
-IndexHandler::~IndexHandler(){
-    closeIndex();
-    delete treeFileBm;
-    delete keyFileBm;
-    delete[] nowdata;
 }
 
 void IndexHandler::insert(key_ptr key, RID rid){
@@ -251,8 +242,8 @@ void IndexHandler::closeIndex(){
 
 void IndexHandler::removeIndex() {
     closeIndex();
-    treeFileBm->removeFile(getTreeFilename().c_str());
-    keyFileBm->removeFile(getKeyFilename().c_str());
+    bm->removeFile(getTreeFilename().c_str());
+    bm->removeFile(getKeyFilename().c_str());
 }
 
 void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){

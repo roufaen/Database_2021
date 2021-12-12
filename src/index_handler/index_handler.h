@@ -7,11 +7,11 @@
 
 class IndexScan;
 
-class IndexHandler{
+class IndexHandler{ //REMINDER: ALWAYS CLOSE BEFORE OPEN
 public:
-    IndexHandler(std::string tableName, std::string colName, ix::DataType type);
-    ~IndexHandler();
-
+    IndexHandler() {nowdata = new char[MAX_RECORD_LEN];}
+    ~IndexHandler() {delete[] nowdata;}
+    void openIndex(std::string tableName, std::string colName, ix::DataType type, BufManager* bm);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
@@ -33,8 +33,7 @@ private:
 
     shared_ptr<IndexFileHandler> treeFile = nullptr;
     shared_ptr<RecordHandler> keyFile = nullptr;
-    BufManager* treeFileBm;
-    BufManager* keyFileBm;
+    BufManager* bm;
     char* nowdata;
 
     void insertIntoNonFullPage(key_ptr key, RID rid, int pageID); 
