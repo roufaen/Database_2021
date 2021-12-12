@@ -10,15 +10,18 @@ using namespace std;
 
 class Table {
 public:
-    Table(string dbName, string tableName, RecordHandler *recordHandler);
+    Table(string dbName, string tableName, BufManager *bufManager);
     ~Table();
     vector <TableHeader> getHeaders();
     vector <Data> exeSelect(RID rid);
     RID exeInsert(vector <Data> data);
     int exeDelete(RID rid);
     RID exeUpdate(vector <Data> data, RID rid);
+    vector <RID> allRecords();
 
 private:
+    vector <TableHeader> readHeaders();
+    int writeHeaders(vector <TableHeader> headers); 
     RecordHandler *recordHandler;
     string dbName, tableName;
     vector <TableHeader> headers;

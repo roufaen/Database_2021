@@ -1,45 +1,8 @@
-# Prerequisites
+# Compiled files
 *.d
-
-# Compiled Object files
-*.slo
-*.lo
 *.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
 *.out
-*.app
-
-# Build
-build/
-
-# VSCode, IDEA
-.vscode
-.IDEA
-
-# DS_STORE
-.DS_STORE
 
 # data
 .dat
@@ -47,3 +10,13 @@ build/
 # log
 *.key
 *.tree
+
+# Build
+build
+
+# VSCode, IDEA
+.vscode
+.IDEA
+
+# DS_STORE
+.DS_STORE

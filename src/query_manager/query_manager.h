@@ -6,15 +6,26 @@
 # include "../system_manager/system_manager.h"
 # include "./condition.h"
 # include "./data.h"
+# include <string>
+# include <map>
+
+using namespace std;
 
 class QueryManager {
 public:
     QueryManager(RecordHandler *recordHandler, IndexHandler *indexHandler, SystemManager *systemManager);
     ~QueryManager();
-    int exeSelect(vector <const char*> tableNameList, vector <const char*> selectorList, vector <Condition> conditionList);
-    int exeInsert(const char *tableName, vector <Data> dataList);
-    int exeDelete(const char *tableName, vector <Condition> conditionList);
-    int exeUpdate(const char *tableName, vector <TableHeader> headerList, vector <Data> dataList, vector <Condition> conditionList);
+    int exeSelect(vector <string> tableNameList, vector <string> selectorList, vector <Condition> conditionList, vector <vector <Data>>& resData);
+    int exeInsert(string tableName, vector <Data> dataList);
+    int exeDelete(string tableName, vector <Condition> conditionList);
+    int exeUpdate(string tableName, vector <TableHeader> headerList, vector <Data> dataList, vector <Condition> conditionList);
+
+private:
+    bool compare(int lInt, double lFloat, string lString, int rInt, double rFloat, string rString, ConditionType cond);
+    bool conditionJudge(vector <TableHeader> headerList, vector <Data> dataList, vector <Condition> conditionList);
+    RecordHandler *recordHandler;
+    IndexHandler *indexHandler;
+    SystemManager *systemManager;
 };
 
 # endif

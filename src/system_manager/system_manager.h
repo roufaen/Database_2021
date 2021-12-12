@@ -15,10 +15,12 @@ public:
     int dropDb(string dbName);
     int openDb(string dbName);
     int closeDb();
-    int dbName(string& dbName);
+    string dbName();
     int createTable(string tableName, vector <TableHeader> headers);
     int dropTable(string tableName);
-    vector <TableHeader> getHeaders(string tableName);
+    bool hasTable(string tableName);
+    //vector <TableHeader> getHeaders(string tableName);
+    Table *getTable(string tableName);
     int createIndex(string tableName, string headerName);
     int dropIndex(string tableName, string headerName);
 };

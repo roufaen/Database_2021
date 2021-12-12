@@ -6,7 +6,7 @@
 using namespace std;
 
 struct Data {
-    int intVal;
+    int intVal, refCount = 0;
     double floatVal;
     string stringVal;
     VarType varType;

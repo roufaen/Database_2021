@@ -22,7 +22,6 @@ int RecordHandler::createFile(string fileName) {
         newHeader.recordPerPage = 3;
         newHeader.recordNumPageOffset = PAGE_SIZE - 4;
         newHeader.recordSize = MAX_RECORD_LEN;
-        //newHeader.recordSize = 4;
         newHeader.slotMapOffset = MAX_RECORD_LEN * 3;
         newHeader.slotMapSize = ceil(newHeader.recordPerPage / 8.0);
         memcpy(page, &newHeader, sizeof(newHeader));
@@ -47,7 +46,7 @@ int RecordHandler::openFile(string fileName) {
     } else {
         this->fileID = this->bufManager->openFile(fileName.c_str());
         int idx = -1;
-        BufType headerPage = this->bufManager->getPage(fileID, 0, idx);
+        BufType headerPage = this->bufManager->getPage(this->fileID, 0, idx);
         memcpy(&this->header, headerPage, sizeof(this->header));
         while (!availablePage.empty()) {
             availablePage.pop();
@@ -73,6 +72,19 @@ int RecordHandler::closeFile() {
         this->fileID = -1;
         return 0;
     }
+}
+
+int RecordHandler::readHeader(char *pData) {
+    int idx = -1;
+    BufType page = this->bufManager->getPage(this->fileID, 0, idx);
+    memcpy(pData, page + sizeof(header), MAX_RECORD_LEN);
+}
+
+int RecordHandler::writeHeader(char *pData) {
+    int idx = -1;
+    BufType page = this->bufManager->getPage(this->fileID, 0, idx);
+    memcpy(page + sizeof(header), pData, MAX_RECORD_LEN);
+    this->bufManager->writeBack(idx);
 }
 
 int RecordHandler::getRecord(const RID &rid, char *pData) {
@@ -158,4 +170,19 @@ RID RecordHandler::updateRecord(const RID &rid, const char *pData, int len) {
     } else {
         return insertRecord(pData, len);
     }
+}
+
+vector <RID> RecordHandler::allRecords() {
+    vector <RID> rids;
+    RID rid;
+    for (int i = 1, idx = -1; i <= this->header.pageNum; i++) {
+        BufType page = this->bufManager->getPage(this->fileID, i, idx);
+        for (int j = 0; j < this->header.recordPerPage; j++) {
+            if ((page[this->header.slotMapOffset + j / 8] & (1 << (j % 8))) == 1) {
+                rid.pageID = i, rid.slotID = j;
+                rids.push_back(rid);
+            }
+        }
+    }
+    return rids;
 }

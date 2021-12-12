@@ -9,10 +9,11 @@ using namespace std;
 
 struct Condition {
     ConditionType condType;
-    TableHeader leftCol, rightCol;
+    VarType rightType;
+    bool rightNull, useColumn;
+    string leftTableName, rightTableName, leftCol, rightCol, rightStringVal;
     int rightIntVal;
     double rightFloatVal;
-    string rightStringVal;
 };
 
 enum ConditionType { EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, IN };
