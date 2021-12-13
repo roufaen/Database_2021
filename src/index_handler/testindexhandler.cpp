@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 int main(){
-    IndexHandler* ih = new IndexHandler("test", "name", ix::DataType::INT);
+    IndexHandler* ih = new IndexHandler("test", "name", INT);
     printf("Built\n");
     for(int i=0; i<10000; i++){
         ih->insert((char*)&i, RID{i,i});

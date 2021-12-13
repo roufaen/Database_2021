@@ -1,24 +1,24 @@
 #include "index_handler.h"
 
-int getLen(key_ptr key, ix::DataType _type){
+int getLen(key_ptr key, VarType _type){
     switch (_type){
-        case ix::DataType::FLOAT: return 4;
-        case ix::DataType::INT: return 4;
-        case ix::DataType::VARCHAR: return strlen(key);
+        case FLOAT: return 4;
+        case INT: return 4;
+        case VARCHAR: return strlen(key);
         default: return 0;
     }
 }
-int compare(ix::DataType _type, key_ptr a, char* b){
+int compare(VarType _type, key_ptr a, char* b){
     switch (_type) {
-        case ix::DataType::FLOAT: {
+        case FLOAT: {
             float diff = (*(float*)a - *(float*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
-        case ix::DataType::INT: {
+        case INT: {
             int diff = (*(int*)a - *(int*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
-        case ix::DataType::VARCHAR: {
+        case VARCHAR: {
             int lena = strlen(a);
             int lenb = strlen(b);
             int len = min(lena, lenb);
@@ -34,7 +34,7 @@ int compare(ix::DataType _type, key_ptr a, char* b){
     return 0;
 }
 
-void IndexHandler::openIndex(std::string _tableName, std::string _colName, ix::DataType _type, BufManager* _bm){
+void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type, BufManager* _bm){
     tableName = _tableName;
     colName = _colName;
     type = _type;

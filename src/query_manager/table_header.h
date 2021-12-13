@@ -7,7 +7,7 @@
 using namespace std;
 
 struct TableHeader {
-    string tableName, headerName;
+    string tableName, headerName, foreignTableName, foreignHeaderName;
     VarType varType;
     int len, refCount = 0;
     bool isPrimary, isForeign, permitNull;

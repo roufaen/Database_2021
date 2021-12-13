@@ -6,16 +6,12 @@ Table::Table(string dbName, string tableName, BufManager *bufManager) {
     string fileName = "table_" + dbName + "_" + tableName;
     this->recordHandler = new RecordHandler(bufManager);
     this->recordHandler->openFile(fileName);
-    this->headers = readHeaders();
+    this->headers = getHeaders();
 }
 
 Table::~Table() {
     recordHandler->closeFile();
     delete this->recordHandler;
-}
-
-vector <TableHeader> Table::getHeaders() {
-    return this->headers;
 }
 
 vector <Data> Table::exeSelect(RID rid) {
@@ -63,14 +59,7 @@ RID Table::exeInsert(vector <Data> data) {
 
     char *ptr = pData;
     for (int i = 0, size = data.size(); i < size; i++) {
-        if (data[i].isNull == 1 && this->headers[i].permitNull == 0) {
-            return rid;
-        } else if (data[i].varType != this->headers[i].varType) {
-            return rid;
-        } else if (data[i].varType == CHAR && data[i].stringVal.size() > this->headers[i].len) {
-            return rid;
-        }
-        int siz = data[i].varType == VARCHAR ? data[i].stringVal.size() : this->headers[i].len;
+        int siz = this->headers[i].varType == VARCHAR ? data[i].stringVal.size() : this->headers[i].len;
         if (data[i].isNull == true) {
             siz = 0;
         }
@@ -81,16 +70,16 @@ RID Table::exeInsert(vector <Data> data) {
 
         if (data[i].isNull == true) {
             ptr += 0;
-        } else if (data[i].varType == CHAR) {
+        } else if (this->headers[i].varType == CHAR) {
             memcpy(ptr, data[i].stringVal.c_str(), this->headers[i].len);
             ptr += this->headers[i].len;
-        } else if (data[i].varType == VARCHAR) {
+        } else if (this->headers[i].varType == VARCHAR) {
             memcpy(ptr, data[i].stringVal.c_str(), data[i].stringVal.size());
             ptr += data[i].stringVal.size();
-        } else if (data[i].varType == INT || data[i].varType == DATE) {
+        } else if (this->headers[i].varType == INT || this->headers[i].varType == DATE) {
             memcpy(ptr, &data[i].intVal, sizeof(int));
             ptr += sizeof(int);
-        } else if (data[i].varType == FLOAT) {
+        } else if (this->headers[i].varType == FLOAT) {
             memcpy(ptr, &data[i].floatVal, sizeof(double));
             ptr += sizeof(double);
         }
@@ -117,7 +106,7 @@ vector <RID> Table::allRecords() {
     return this->recordHandler->allRecords();
 }
 
-vector <TableHeader> Table::readHeaders() {
+vector <TableHeader> Table::getHeaders() {
     vector <TableHeader> headers;
     TableHeader header;
     header.tableName = tableName;
@@ -132,6 +121,21 @@ vector <TableHeader> Table::readHeaders() {
         header.headerName = ptr;
         *(ptr + stringLen) = ch;
         ptr += stringLen;
+
+        stringLen = *((int*)ptr);
+        ch = *(ptr + stringLen);
+        *(ptr + stringLen) = 0;
+        header.foreignTableName = ptr;
+        *(ptr + stringLen) = ch;
+        ptr += stringLen;
+
+        stringLen = *((int*)ptr);
+        ch = *(ptr + stringLen);
+        *(ptr + stringLen) = 0;
+        header.foreignHeaderName = ptr;
+        *(ptr + stringLen) = ch;
+        ptr += stringLen;
+
         header.varType = *((int*)ptr);
         ptr += sizeof(int);
         header.len = *((int*)ptr);
@@ -162,6 +166,19 @@ int Table::writeHeaders(vector <TableHeader> headers) {
         ptr += sizeof(int);
         memcpy(ptr, headers[i].headerName.c_str(), stringLen);
         ptr += stringLen;
+
+        stringLen = headers[i].foreignTableName.size();
+        memcpy(ptr, &stringLen, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, headers[i].foreignTableName.c_str(), stringLen);
+        ptr += stringLen;
+
+        stringLen = headers[i].foreignHeaderName.size();
+        memcpy(ptr, &stringLen, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, headers[i].foreignHeaderName.c_str(), stringLen);
+        ptr += stringLen;
+
         memcpy(ptr, &headers[i].varType, sizeof(int));
         ptr += sizeof(int);
         memcpy(ptr, &headers[i].len, sizeof(int));
@@ -177,5 +194,6 @@ int Table::writeHeaders(vector <TableHeader> headers) {
     }
     recordHandler->writeHeader(headerChar);
     delete[] headerChar;
+    this->headers = headers;
     return 0;
 }

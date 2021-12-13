@@ -2,6 +2,7 @@
 #define INDEX_HANDLER_H
 
 #include "ix.h"
+#include "../utils/var_type.h"
 #include <cstring>
 #include <vector>
 
@@ -11,7 +12,7 @@ class IndexHandler{ //REMINDER: ALWAYS CLOSE BEFORE OPEN
 public:
     IndexHandler() {nowdata = new char[MAX_RECORD_LEN];}
     ~IndexHandler() {delete[] nowdata;}
-    void openIndex(std::string tableName, std::string colName, ix::DataType type, BufManager* bm);
+    void openIndex(std::string tableName, std::string colName, VarType type, BufManager* bm);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
@@ -29,7 +30,7 @@ public:
 
 private:
     string tableName, colName;
-    ix::DataType type;
+    VarType type;
 
     shared_ptr<IndexFileHandler> treeFile = nullptr;
     shared_ptr<RecordHandler> keyFile = nullptr;

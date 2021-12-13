@@ -13,6 +13,7 @@ public:
     Table(string dbName, string tableName, BufManager *bufManager);
     ~Table();
     vector <TableHeader> getHeaders();
+    int writeHeaders(vector <TableHeader> headers); 
     vector <Data> exeSelect(RID rid);
     RID exeInsert(vector <Data> data);
     int exeDelete(RID rid);
@@ -20,8 +21,6 @@ public:
     vector <RID> allRecords();
 
 private:
-    vector <TableHeader> readHeaders();
-    int writeHeaders(vector <TableHeader> headers); 
     RecordHandler *recordHandler;
     string dbName, tableName;
     vector <TableHeader> headers;
