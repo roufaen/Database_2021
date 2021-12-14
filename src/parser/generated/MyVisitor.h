@@ -5,9 +5,14 @@
 
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
+
 template <class Type>  
 Type getValue(const string& str);
+
 void getFromValue(Data& dt, SQLParser::ValueContext* data);
+
+template <class Type>
+std::vector<Type> castVector(antlrcpp::Any& x);
 
 class MyVisitor: public SQLBaseVisitor {
     private:
@@ -21,12 +26,12 @@ class MyVisitor: public SQLBaseVisitor {
   }
   virtual antlrcpp::Any visitCreate_db(SQLParser::Create_dbContext *ctx) override {
     sm->createDb(ctx->Identifier()->getText());
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitDrop_db(SQLParser::Drop_dbContext *ctx) override {
     sm->dropDb(ctx->Identifier()->getText());
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitShow_dbs(SQLParser::Show_dbsContext *ctx) override {
@@ -36,7 +41,7 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitUse_db(SQLParser::Use_dbContext *ctx) override {
     sm->openDb(ctx->Identifier()->getText());
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitShow_tables(SQLParser::Show_tablesContext *ctx) override {
@@ -103,12 +108,12 @@ class MyVisitor: public SQLBaseVisitor {
       } 
     }
     sm->createTable(tableName, tableHeader);
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitDrop_table(SQLParser::Drop_tableContext *ctx) override {
     sm->dropDb(ctx->Identifier()->getText());
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitDescribe_table(SQLParser::Describe_tableContext *ctx) override {
@@ -122,7 +127,7 @@ class MyVisitor: public SQLBaseVisitor {
       std::vector<Data> datalist;
       datalist.clear();
       for(auto data:i->value()){
-        Data dt = {0,0,"",0,false};
+        Data dt = {0,0,0, "",0,false};
         getFromValue(dt, data);
         datalist.push_back(dt);
       }
@@ -133,52 +138,68 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitDelete_from_table(SQLParser::Delete_from_tableContext *ctx) override {
     std::string tableName = ctx->Identifier()->getText();
-    std::vector<Condition> conditionList;
-    conditionList.clear();
-    std::vector<SQLParser::Where_clauseContext *> wax = ctx->where_and_clause()->where_clause();
-    for(auto i:wax){
-      Condition cond;
-      SQLParser::Where_operator_expressionContext* woe = dynamic_cast<SQLParser::Where_operator_expressionContext*>(i);
-      if(woe==nullptr) continue;
-      SQLParser::OperateContext* oc = woe->operate();
-      cond.condType = getCondType(oc);
-      SQLParser::ColumnContext* cc = woe->column();
-      cond.leftCol.tableName = cc->Identifier(0)->getText();
-      cond.leftCol.headerName = cc->Identifier(1)->getText();
-      SQLParser::ExpressionContext* ec = woe->expression();
-      if(ec->value() != nullptr){
-        Data dt = {0,0,"",0,false};
-        getFromValue(dt,ec->value());
-        cond.rightFloatVal = dt.floatVal;
-        cond.rightStringVal = dt.stringVal;
-        cond.rightIntVal = dt.intVal;
-      } else if (ec->column() != nullptr) {
-        cond.rightCol.tableName = ec->column()->Identifier(0)->getText();
-        cond.rightCol.headerName = ec->column()->Identifier(1)->getText();
-      } else {
-        cerr << "Get error in your right input side\n";
-        return visitChildren(ctx);
-      }
-      conditionList.push_back(cond);
-    }
-    qm->exeDelete(tableName.c_str(), conditionList);
-    return visitChildren(ctx);
+    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    if(conditionList.size()) qm->exeDelete(tableName.c_str(), conditionList);
+    else cerr << "The condition fails\n";
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitUpdate_table(SQLParser::Update_tableContext *ctx) override {
-    return visitChildren(ctx);
+    std::string tableName = ctx->Identifier()->getText();
+    std::vector<std::string> headerList;
+    std::vector<Data> dataList;
+    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    SQLParser::Set_clauseContext* sc = ctx->set_clause();
+    auto sc_eq = sc->EqualOrAssign();
+    int size = sc_eq.size();
+    for(int i = 0; i < size; i++)
+    {
+      Data dt;
+      getFromValue(dt, sc->value(i));
+      headerList.push_back(sc->Identifier(i)->getText());
+      dataList.push_back(dt);
+    }
+    qm->exeUpdate(tableName, headerList, dataList, conditionList);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
-    return visitChildren(ctx);
+    std::vector<std::vector<Data>> resData;
+    resData.clear();
+    std::vector<std::string> tableNameList;
+    std::vector<std::string> selectorList;
+    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    tableNameList.clear();
+    auto ids = ctx->identifiers()->Identifier();
+    for(auto i:ids) 
+      tableNameList.push_back(i->getText());
+    //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
+    //NO GROUPED SEARCH SUPPORTED
+    auto sls = ctx->selectors()->selector();
+    for(auto i:sls)
+    {
+      selectorList.push_back(i->column()->Identifier(1)->getText());
+    }
+    qm->exeSelect(tableNameList, selectorList, conditionList, resData);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
-    return visitChildren(ctx);
+    std::string tableName = ctx->Identifier()->getText();
+    auto headerTable = ctx->identifiers()->Identifier();
+    for(auto i:headerTable){
+      sm->createIndex(tableName, i->getText());
+    }
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_drop_index(SQLParser::Alter_drop_indexContext *ctx) override {
-    return visitChildren(ctx);
+    std::string tableName = ctx->Identifier()->getText();
+    auto headerTable = ctx->identifiers()->Identifier();
+    for(auto i:headerTable){
+      sm->dropIndex(tableName, i->getText());
+    }
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
@@ -201,39 +222,39 @@ class MyVisitor: public SQLBaseVisitor {
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override {
-    return visitChildren(ctx);
+  virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override{
+    std::vector<Condition> conditionList;
+    conditionList.clear();
+    std::vector<SQLParser::Where_clauseContext *> wax = ctx->where_clause();
+    for(auto i:wax){
+      Condition cond;
+      SQLParser::Where_operator_expressionContext* woe = dynamic_cast<SQLParser::Where_operator_expressionContext*>(i);
+      if(woe==nullptr) continue;
+      SQLParser::OperateContext* oc = woe->operate();
+      cond.condType = getCondType(oc);
+      SQLParser::ColumnContext* cc = woe->column();
+      cond.leftTableName = cc->Identifier(0)->getText();
+      cond.leftCol = cc->Identifier(1)->getText();
+      SQLParser::ExpressionContext* ec = woe->expression();
+      if(ec->value() != nullptr){
+        Data dt = {0,0,0,"",0,false};
+        getFromValue(dt,ec->value());
+        cond.rightFloatVal = dt.floatVal;
+        cond.rightStringVal = dt.stringVal;
+        cond.rightIntVal = dt.intVal;
+      } else if (ec->column() != nullptr) {
+        cond.rightTableName = ec->column()->Identifier(0)->getText();
+        cond.rightCol = ec->column()->Identifier(1)->getText();
+      } else {
+        cerr << "Get error in your right input side\n";
+        return defaultResult();
+      }
+      conditionList.push_back(cond);
+    }
+    return conditionList;
   }
 
   virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitColumn(SQLParser::ColumnContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitExpression(SQLParser::ExpressionContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitSet_clause(SQLParser::Set_clauseContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitSelectors(SQLParser::SelectorsContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitSelector(SQLParser::SelectorContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitIdentifiers(SQLParser::IdentifiersContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitOperate(SQLParser::OperateContext *ctx) override {
     return visitChildren(ctx);
   }
 
