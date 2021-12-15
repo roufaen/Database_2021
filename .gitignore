@@ -4,6 +4,7 @@
 *.obj
 *.out
 
+
 # data
 .dat
 
