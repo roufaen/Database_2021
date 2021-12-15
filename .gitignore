@@ -3,7 +3,7 @@
 *.o
 *.obj
 *.out
-
+*.exe
 
 # data
 .dat
