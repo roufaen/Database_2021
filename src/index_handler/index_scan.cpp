@@ -67,7 +67,8 @@ void IndexScan::previous(){
 void IndexScan::previousKey(){
     currentCumulation = 0;
     currentOverflowPage = nullptr;
-    int c=  currentNode-> recs;
+    // unused variable
+    // int c=  currentNode-> recs;
     if(currentKeyPos){
         currentKeyPos--;
         currentValuePos = 0;

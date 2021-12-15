@@ -45,7 +45,9 @@ int RecordHandler::openFile(string fileName) {
         return -1;
     } else {
         this->fileID = this->bufManager->openFile(fileName.c_str());
-        if(this->fileID == -1) return -1;
+        if (this->fileID == -1) {
+            return -1;
+        }
         int idx = -1;
         BufType headerPage = this->bufManager->getPage(this->fileID, 0, idx);
         memcpy(&this->header, headerPage, sizeof(this->header));
@@ -79,6 +81,7 @@ int RecordHandler::readHeader(char *pData) {
     int idx = -1;
     BufType page = this->bufManager->getPage(this->fileID, 0, idx);
     memcpy(pData, page + sizeof(header), MAX_RECORD_LEN);
+    return 0;
 }
 
 int RecordHandler::writeHeader(char *pData) {
@@ -86,6 +89,7 @@ int RecordHandler::writeHeader(char *pData) {
     BufType page = this->bufManager->getPage(this->fileID, 0, idx);
     memcpy(page + sizeof(header), pData, MAX_RECORD_LEN);
     this->bufManager->writeBack(idx);
+    return 0;
 }
 
 int RecordHandler::getRecord(const RID &rid, char *pData) {
@@ -173,7 +177,7 @@ RID RecordHandler::updateRecord(const RID &rid, const char *pData, int len) {
     }
 }
 
-vector <RID> RecordHandler::allRecords() {
+vector <RID> RecordHandler::getRecordList() {
     vector <RID> rids;
     RID rid;
     for (int i = 1, idx = -1; i <= this->header.pageNum; i++) {

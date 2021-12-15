@@ -614,7 +614,8 @@ int IndexHandler::getGreaterCountIn(int pageID, key_ptr key){
     if(node->nodeType == ix::NodeType::LEAF){
         for(int i=node->recs-1; i>=0; i--){
             keyFile->getRecord(node->data[i].keyPos,nowdata);
-            int* nowd = (int*)nowdata;
+            // unused variable
+            //int* nowd = (int*)nowdata;
             if(compare(type, key, nowdata) >= 0) return ret;
             ret += node->data[i].count;
         }

@@ -1,7 +1,6 @@
 # ifndef QUERY_MANAGER_H
 # define QUERY_MANAGER_H
 
-# include "../record_handler/record_handler.h"
 # include "../index_handler/index_handler.h"
 # include "../system_manager/system_manager.h"
 # include "./condition.h"
@@ -13,7 +12,7 @@ using namespace std;
 
 class QueryManager {
 public:
-    QueryManager(RecordHandler *recordHandler, IndexHandler *indexHandler, SystemManager *systemManager, BufManager *bufManager);
+    QueryManager(IndexHandler *indexHandler, SystemManager *systemManager, BufManager *bufManager);
     ~QueryManager();
     // 输入 < 表名, 列名 > ，筛选条件，输出结果保存在 resData 中，数据顺序与输入要求一致，从多表中查询即为连接
     int exeSelect(vector <string> tableNameList, vector <string> selectorList, vector <Condition> conditionList, vector <vector <Data>>& resData);
@@ -35,7 +34,6 @@ private:
     bool conditionJudge(vector <TableHeader> headerList, vector <Data> dataList, vector <Condition> conditionList);
     // 列头为 header ，数据为 data ，对引用的外键，其被引用次数 +1 （新增）或 -1 （删除）
     void foreignKeyProcess(vector <TableHeader> headerList, vector <Data> dataList, int delta);
-    RecordHandler *recordHandler;
     IndexHandler *indexHandler;
     SystemManager *systemManager;
     BufManager *bufManager;

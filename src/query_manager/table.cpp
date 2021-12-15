@@ -6,7 +6,18 @@ Table::Table(string dbName, string tableName, BufManager *bufManager) {
     string fileName = "table_" + dbName + "_" + tableName;
     this->recordHandler = new RecordHandler(bufManager);
     this->recordHandler->openFile(fileName);
-    this->headers = getHeaders();
+    this->headerList = getHeaderList();
+}
+
+Table::Table(string dbName, string tableName, BufManager *bufManager, vector <TableHeader> headerList) {
+    this->dbName = dbName, this->tableName = tableName;
+    // create file
+    string fileName = "table_" + dbName + "_" + tableName;
+    this->recordHandler = new RecordHandler(bufManager);
+    this->recordHandler->createFile(fileName);
+    this->recordHandler->openFile(fileName);
+    writeHeaderList(headerList);
+    this->headerList = headerList;
 }
 
 Table::~Table() {
@@ -22,12 +33,12 @@ vector <Data> Table::exeSelect(RID rid) {
     if (this->recordHandler->getRecord(rid, pData) != 0) {
         return res;
     } else {
-        for (int i = 0, siz = 0; i < this->headers.size(); i++) {
+        for (int i = 0, siz = 0; i < (int)this->headerList.size(); i++) {
             memcpy(&siz, ptr, sizeof(int));
             ptr += sizeof(int);
             memcpy(&data.refCount, ptr, sizeof(int));
             ptr += sizeof(int);
-            data.varType = this->headers[i].varType;
+            data.varType = this->headerList[i].varType;
             if (siz == 0) {
                 data.isNull = 1;
             } else {
@@ -43,6 +54,7 @@ vector <Data> Table::exeSelect(RID rid) {
                     memcpy(&data.floatVal, ptr, sizeof(int));
                 }
             }
+            ptr += siz;
             res.push_back(data);
         }
         return res;
@@ -53,13 +65,13 @@ RID Table::exeInsert(vector <Data> data) {
     RID rid = {-1, -1};
     char pData[MAX_RECORD_LEN];
     memset(pData, 0, sizeof(pData));
-    if (this->headers.size() != data.size()) {
+    if (this->headerList.size() != data.size()) {
         return rid;
     }
 
     char *ptr = pData;
     for (int i = 0, size = data.size(); i < size; i++) {
-        int siz = this->headers[i].varType == VARCHAR ? data[i].stringVal.size() : this->headers[i].len;
+        int siz = this->headerList[i].varType == VARCHAR ? data[i].stringVal.size() : this->headerList[i].len;
         if (data[i].isNull == true) {
             siz = 0;
         }
@@ -70,16 +82,16 @@ RID Table::exeInsert(vector <Data> data) {
 
         if (data[i].isNull == true) {
             ptr += 0;
-        } else if (this->headers[i].varType == CHAR) {
-            memcpy(ptr, data[i].stringVal.c_str(), this->headers[i].len);
-            ptr += this->headers[i].len;
-        } else if (this->headers[i].varType == VARCHAR) {
+        } else if (this->headerList[i].varType == CHAR) {
+            memcpy(ptr, data[i].stringVal.c_str(), this->headerList[i].len);
+            ptr += this->headerList[i].len;
+        } else if (this->headerList[i].varType == VARCHAR) {
             memcpy(ptr, data[i].stringVal.c_str(), data[i].stringVal.size());
             ptr += data[i].stringVal.size();
-        } else if (this->headers[i].varType == INT || this->headers[i].varType == DATE) {
+        } else if (this->headerList[i].varType == INT || this->headerList[i].varType == DATE) {
             memcpy(ptr, &data[i].intVal, sizeof(int));
             ptr += sizeof(int);
-        } else if (this->headers[i].varType == FLOAT) {
+        } else if (this->headerList[i].varType == FLOAT) {
             memcpy(ptr, &data[i].floatVal, sizeof(double));
             ptr += sizeof(double);
         }
@@ -94,28 +106,28 @@ int Table::exeDelete(RID rid) {
 }
 
 RID Table::exeUpdate(vector <Data> data, RID rid) {
-    RID rid = {-1, -1};
     if (this->exeDelete(rid) != 0) {
-        return rid;
+        return {-1, -1};
     } else {
         return this->exeInsert(data);
     }
 }
 
-vector <RID> Table::allRecords() {
-    return this->recordHandler->allRecords();
+vector <RID> Table::getRecordList() {
+    return this->recordHandler->getRecordList();
 }
 
-vector <TableHeader> Table::getHeaders() {
-    vector <TableHeader> headers;
+vector <TableHeader> Table::getHeaderList() {
+    vector <TableHeader> headerList;
     TableHeader header;
     header.tableName = tableName;
     char *headerChar = new char[MAX_RECORD_LEN];
-    recordHandler->readHeader(headerChar);
+    this->recordHandler->readHeader(headerChar);
     int headerNum = *((int*)headerChar);
     char *ptr = headerChar + sizeof(int);
     for (int i = 0; i < headerNum; i++) {
         int stringLen = *((int*)ptr);
+        ptr += sizeof(int);
         char ch = *(ptr + stringLen);
         *(ptr + stringLen) = 0;
         header.headerName = ptr;
@@ -123,6 +135,7 @@ vector <TableHeader> Table::getHeaders() {
         ptr += stringLen;
 
         stringLen = *((int*)ptr);
+        ptr += sizeof(int);
         ch = *(ptr + stringLen);
         *(ptr + stringLen) = 0;
         header.foreignTableName = ptr;
@@ -130,6 +143,7 @@ vector <TableHeader> Table::getHeaders() {
         ptr += stringLen;
 
         stringLen = *((int*)ptr);
+        ptr += sizeof(int);
         ch = *(ptr + stringLen);
         *(ptr + stringLen) = 0;
         header.foreignHeaderName = ptr;
@@ -148,52 +162,55 @@ vector <TableHeader> Table::getHeaders() {
         ptr += sizeof(bool);
         header.permitNull = *((bool*)ptr);
         ptr += sizeof(bool);
-        headers.push_back(header);
+        headerList.push_back(header);
     }
     delete[] headerChar;
-    return headers;
+    return headerList;
 }
 
-int Table::writeHeaders(vector <TableHeader> headers) {
-    vector <TableHeader> headers;
+int Table::writeHeaderList(vector <TableHeader> headerList) {
     char *headerChar = new char[MAX_RECORD_LEN];
-    int headerNum = headers.size();
+    int headerNum = headerList.size();
     memcpy(headerChar, &headerNum, sizeof(int));
     char *ptr = headerChar + sizeof(int);
     for (int i = 0; i < headerNum; i++) {
-        int stringLen = headers[i].headerName.size();
+        int stringLen = headerList[i].headerName.size();
         memcpy(ptr, &stringLen, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, headers[i].headerName.c_str(), stringLen);
+        memcpy(ptr, headerList[i].headerName.c_str(), stringLen);
         ptr += stringLen;
 
-        stringLen = headers[i].foreignTableName.size();
+        stringLen = headerList[i].foreignTableName.size();
         memcpy(ptr, &stringLen, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, headers[i].foreignTableName.c_str(), stringLen);
+        memcpy(ptr, headerList[i].foreignTableName.c_str(), stringLen);
         ptr += stringLen;
 
-        stringLen = headers[i].foreignHeaderName.size();
+        stringLen = headerList[i].foreignHeaderName.size();
         memcpy(ptr, &stringLen, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, headers[i].foreignHeaderName.c_str(), stringLen);
+        memcpy(ptr, headerList[i].foreignHeaderName.c_str(), stringLen);
         ptr += stringLen;
 
-        memcpy(ptr, &headers[i].varType, sizeof(int));
+        memcpy(ptr, &headerList[i].varType, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, &headers[i].len, sizeof(int));
+        memcpy(ptr, &headerList[i].len, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, &headers[i].refCount, sizeof(int));
+        memcpy(ptr, &headerList[i].refCount, sizeof(int));
         ptr += sizeof(int);
-        memcpy(ptr, &headers[i].isPrimary, sizeof(bool));
+        memcpy(ptr, &headerList[i].isPrimary, sizeof(bool));
         ptr += sizeof(bool);
-        memcpy(ptr, &headers[i].isForeign, sizeof(bool));
+        memcpy(ptr, &headerList[i].isForeign, sizeof(bool));
         ptr += sizeof(bool);
-        memcpy(ptr, &headers[i].permitNull, sizeof(bool));
+        memcpy(ptr, &headerList[i].permitNull, sizeof(bool));
         ptr += sizeof(bool);
     }
-    recordHandler->writeHeader(headerChar);
+    this->recordHandler->writeHeader(headerChar);
     delete[] headerChar;
-    this->headers = headers;
+    this->headerList = headerList;
     return 0;
+}
+
+string Table::getTableName() {
+    return this->tableName;
 }

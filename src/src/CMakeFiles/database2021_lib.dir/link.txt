@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdatabase2021_lib.a  CMakeFiles/database2021_lib.dir/record_handler/record_handler.o CMakeFiles/database2021_lib.dir/index_handler/index_handler.o CMakeFiles/database2021_lib.dir/index_handler/index_scan.o CMakeFiles/database2021_lib.dir/index_handler/index_file_handler.o CMakeFiles/database2021_lib.dir/query_manager/query_manager.o CMakeFiles/database2021_lib.dir/query_manager/table.o CMakeFiles/database2021_lib.dir/system_manager/system_manager.o CMakeFiles/database2021_lib.dir/system_manager/name_handler.o
+/usr/bin/ranlib libdatabase2021_lib.a

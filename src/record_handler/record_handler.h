@@ -25,7 +25,7 @@ public:
     int deleteRecord(const RID &rid);                                                 // 删除特定记录
     RID insertRecord(const char *pData, int len = MAX_RECORD_LEN);                    // 将字节序列pData插入特定位置
     RID updateRecord(const RID &rid, const char *pData, int len = MAX_RECORD_LEN);    // 将特定位置记录更新为字节序列pData
-    vector <RID> allRecords();
+    vector <RID> getRecordList();
 
 private:
     BufManager *bufManager;
