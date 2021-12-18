@@ -37,16 +37,19 @@ void getFromValue(Data& dt, SQLParser::ValueContext* data){
     try
     { 
         dt.floatVal = getValue<float>(data->Float()->getText());
+        dt.varType = FLOAT;
     }
     catch(const std::exception& e) {}
     try
     { 
-        dt.intVal = getValue<int>(data->Float()->getText());
+        dt.intVal = getValue<int>(data->Integer()->getText());
+        dt.varType = INT;
     }
     catch(const std::exception& e) {}
     try
     { 
         dt.stringVal = data->String()->getText();
+        dt.varType = VARCHAR;
     }
     catch(const std::exception& e) {}
     try

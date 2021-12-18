@@ -174,7 +174,8 @@ class MyVisitor: public SQLBaseVisitor {
       headerList.push_back(sc->Identifier(i)->getText());
       dataList.push_back(dt);
     }
-    qm->exeUpdate(tableName, headerList, dataList, conditionList);
+    if (qm->exeUpdate(tableName, headerList, dataList, conditionList)==0) printf("Successfully updated.\n");
+      else printf("Fail to update.\n");
     return defaultResult();
   }
 
@@ -195,7 +196,13 @@ class MyVisitor: public SQLBaseVisitor {
     {
       selectorList.push_back(i->column()->Identifier(1)->getText());
     }
-    qm->exeSelect(tableNameList, selectorList, conditionList, resData);
+    if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
+      for(auto i:resData){
+        for(auto j:i){
+
+        }
+      }
+    } else printf("Fail to select the data\n");
     return defaultResult();
   }
 
@@ -257,6 +264,8 @@ class MyVisitor: public SQLBaseVisitor {
         cond.rightFloatVal = dt.floatVal;
         cond.rightStringVal = dt.stringVal;
         cond.rightIntVal = dt.intVal;
+        cond.rightNull = dt.isNull;
+        cond.rightType = dt.varType;
       } else if (ec->column() != nullptr) {
         cond.rightTableName = ec->column()->Identifier(0)->getText();
         cond.rightCol = ec->column()->Identifier(1)->getText();
