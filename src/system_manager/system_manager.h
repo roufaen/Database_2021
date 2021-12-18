@@ -24,10 +24,10 @@ public:
     int dropTable(string tableName);
     bool hasTable(string tableName);
     Table *getTable(string tableName);
+    int createIndex(string tableName, string headerName);
+    int dropIndex(string tableName, string headerName);
 
 private:
-    //int createIndex(string tableName, string headerName);
-    //int dropIndex(string tableName, string headerName);
     IndexHandler *indexHandler;
     BufManager *bufManager;
     NameHandler *dbNameHandler, *tableNameHandler;

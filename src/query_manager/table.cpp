@@ -160,7 +160,11 @@ vector <TableHeader> Table::getHeaderList() {
         ptr += sizeof(bool);
         header.isForeign = *((bool*)ptr);
         ptr += sizeof(bool);
+        header.isUnique = *((bool*)ptr);
+        ptr += sizeof(bool);
         header.permitNull = *((bool*)ptr);
+        ptr += sizeof(bool);
+        header.hasIndex = *((bool*)ptr);
         ptr += sizeof(bool);
         headerList.push_back(header);
     }
@@ -202,7 +206,11 @@ int Table::writeHeaderList(vector <TableHeader> headerList) {
         ptr += sizeof(bool);
         memcpy(ptr, &headerList[i].isForeign, sizeof(bool));
         ptr += sizeof(bool);
+        memcpy(ptr, &headerList[i].isUnique, sizeof(bool));
+        ptr += sizeof(bool);
         memcpy(ptr, &headerList[i].permitNull, sizeof(bool));
+        ptr += sizeof(bool);
+        memcpy(ptr, &headerList[i].hasIndex, sizeof(bool));
         ptr += sizeof(bool);
     }
     this->recordHandler->writeHeader(headerChar);

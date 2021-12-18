@@ -15,7 +15,7 @@ public:
     Table(string dbName, string tableName, BufManager *bufManager, vector <TableHeader> headerList);
     ~Table();
     vector <TableHeader> getHeaderList();
-    int writeHeaderList(vector <TableHeader> headerList); 
+    int writeHeaderList(vector <TableHeader> headerList);
     vector <Data> exeSelect(RID rid);
     RID exeInsert(vector <Data> data);
     int exeDelete(RID rid);

@@ -85,7 +85,6 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
     }
     Table *table = this->systemManager->getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
-    int primaryIdx = -1;
     // 数据长度不符
     if (dataList.size() != headerList.size()) {
         return -1;
@@ -103,39 +102,14 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
         }
     }
     for (int i = 0; i < (int)headerList.size(); i++) {
-        if (headerList[i].isPrimary == true) {
-            primaryIdx = i;
-            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
-            indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[i].headerName, type, this->bufManager);
-            int count = 0;
-            if (type == INT) {
-                count = indexHandler->count((char*)&dataList[i].intVal);
-            } else if (type == FLOAT) {
-                count = indexHandler->count((char*)&dataList[i].floatVal);
-            } else {
-                char str[MAX_RECORD_LEN];
-                memcpy(str, dataList[i].stringVal.c_str(), dataList[i].stringVal.size());
-                count = indexHandler->count(str);
-            }
-            indexHandler->closeIndex();
-            // 主键不能重复
+        if (headerList[i].isUnique == true) {
+            int count = countKey(tableName, headerList[i].headerName, headerList[i].varType, dataList[i].intVal, dataList[i].floatVal, dataList[i].stringVal);
+            // Unique 键不能重复
             if (count != 0) {
                 return -1;
             }
         } else if (headerList[i].isForeign == true) {
-            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
-            indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + headerList[i].foreignTableName, headerList[i].foreignHeaderName, type, this->bufManager);
-            int count = 0;
-            if (type == INT) {
-                count = indexHandler->count((char*)&dataList[i].intVal);
-            } else if (type == FLOAT) {
-                count = indexHandler->count((char*)&dataList[i].floatVal);
-            } else {
-                char str[MAX_RECORD_LEN];
-                memcpy(str, dataList[i].stringVal.c_str(), dataList[i].stringVal.size());
-                count = indexHandler->count(str);
-            }
-            indexHandler->closeIndex();
+            int count = countKey(headerList[i].foreignTableName, headerList[i].foreignHeaderName, headerList[i].varType, dataList[i].intVal, dataList[i].floatVal, dataList[i].stringVal);
             // 外键不能引用不存在的键
             if (count != 1) {
                 return -1;
@@ -144,7 +118,7 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
     }
 
     // 插入数据和索引
-    opInsert(tableName, dataList, primaryIdx);
+    opInsert(tableName, dataList);
 
     return 0;
 }
@@ -179,7 +153,7 @@ int QueryManager::exeDelete(string tableName, vector <Condition> conditionList) 
     for (int i = 0; i < (int)headerList.size(); i++) {
         vector <Data> dataList = table->exeSelect(ridList[i]);
         if (conditionJudge(headerList, dataList, conditionList)) {
-            opDelete(tableName, dataList, ridList[i], primaryIdx);
+            opDelete(tableName, dataList, ridList[i]);
         }
     }
 
@@ -200,13 +174,9 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     vector <RID> ridList = table->getRecordList();
     vector <int> updatePos;
     vector <Data> updateDataList;
-    int primaryIdx = -1;
-    // 寻找主键位置，预处理
+    // 预处理
     int updateCount = 0;
     for (int i = 0; i < (int)headerList.size(); i++) {
-        if (headerList[i].isPrimary == true) {
-            primaryIdx = i;
-        }
         int updateHere = 0;
         for (int j = 0; j < (int)updateHeaderNameList.size(); j++) {
             if (headerList[i].headerName == updateHeaderNameList[j] && updateHere == 0) {
@@ -254,35 +224,25 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
         }
     }
 
-    // 判断主键冲突
-    if (primaryIdx != -1 && updatePos[primaryIdx] == 1) {
-        // 多个数据主键相同，主键冲突
-        if (dataLists.size() > 1) {
-            return -1;
-        // 只有一个数据修改
-        } else {
-            VarType type = headerList[primaryIdx].varType == DATE ? INT : (headerList[primaryIdx].varType == CHAR ? VARCHAR : headerList[primaryIdx].varType);
-            this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[primaryIdx].headerName, type, this->bufManager);
-            int count = 0;
-            if (type == INT) {
-                count = indexHandler->count((char*)&updateDataList[primaryIdx].intVal);
-            } else if (type == FLOAT) {
-                count = indexHandler->count((char*)&updateDataList[primaryIdx].floatVal);
+    // 判断 Unique 冲突
+    for (int i = 0; i < headerList.size(); i++) {
+        if (updatePos[i] == 1 && headerList[i].isUnique == true) {
+            // 多个数据相同，冲突
+            if (dataLists.size() > 1) {
+                return -1;
+            // 只有一个数据修改
             } else {
-                char str[MAX_RECORD_LEN];
-                memcpy(str, updateDataList[primaryIdx].stringVal.c_str(), updateDataList[primaryIdx].stringVal.size());
-                count = indexHandler->count(str);
-            }
-            this->indexHandler->closeIndex();
-            // 若修改后的数值本不存在，则可直接修改，否则判断修改前后数值是否一样，若不一样则说明有冲突
-            if (count != 0) {
-                VarType updateType = (headerList[primaryIdx].varType == VARCHAR) ? CHAR : ((headerList[primaryIdx].varType == DATE) ? INT : headerList[primaryIdx].varType);
-                if (updateType == INT && dataLists[0][primaryIdx].intVal != updateDataList[primaryIdx].intVal) {
-                    return -1;
-                } else if (updateType == FLOAT && dataLists[0][primaryIdx].floatVal != updateDataList[primaryIdx].floatVal) {
-                    return -1;
-                } else if (updateType == CHAR && dataLists[0][primaryIdx].stringVal != updateDataList[primaryIdx].stringVal) {
-                    return -1;
+                int count = countKey(tableName, headerList[i].headerName, headerList[i].varType, updateDataList[i].intVal, updateDataList[i].floatVal, updateDataList[i].stringVal);
+                // 若修改后的数值本不存在，则可直接修改，否则判断修改前后数值是否一样，若不一样则说明有冲突
+                if (count != 0) {
+                    VarType updateType = (headerList[i].varType == VARCHAR) ? CHAR : ((headerList[i].varType == DATE) ? INT : headerList[i].varType);
+                    if (updateType == INT && dataLists[0][i].intVal != updateDataList[i].intVal) {
+                        return -1;
+                    } else if (updateType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
+                        return -1;
+                    } else if (updateType == CHAR && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
+                        return -1;
+                    }
                 }
             }
         }
@@ -291,19 +251,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     // 判断外键冲突
     for (int i = 0; i < (int)headerList.size(); i++) {
         if (updatePos[i] == true && headerList[i].isForeign == true) {
-            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
-            indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + headerList[i].foreignTableName, headerList[i].foreignHeaderName, type, this->bufManager);
-            int count = 0;
-            if (type == INT) {
-                count = indexHandler->count((char*)&updateDataList[i].intVal);
-            } else if (type == FLOAT) {
-                count = indexHandler->count((char*)&updateDataList[i].floatVal);
-            } else {
-                char str[MAX_RECORD_LEN];
-                memcpy(str, updateDataList[i].stringVal.c_str(), updateDataList[i].stringVal.size());
-                count = indexHandler->count(str);
-            }
-            indexHandler->closeIndex();
+            int count = countKey(headerList[i].foreignTableName, headerList[i].foreignHeaderName, headerList[i].varType, updateDataList[i].intVal, updateDataList[i].floatVal, updateDataList[i].stringVal);
             // 外键不能引用不存在的键
             if (count != 1) {
                 return -1;
@@ -313,70 +261,74 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
 
     // 更新数据
     for (int i = 0; i < (int)ridList.size(); i++) {
-        opDelete(tableName, dataLists[i], updateRidList[i], primaryIdx);
+        opDelete(tableName, dataLists[i], updateRidList[i]);
         for (int j = 0; j < (int)updateDataList.size(); j++) {
             if (updatePos[j] == 1) {
                 dataLists[i][j] = updateDataList[j];
             }
         }
-        opInsert(tableName, dataLists[i], primaryIdx);
+        opInsert(tableName, dataLists[i]);
     }
 
     return 0;
 }
 
-void QueryManager::opInsert(string tableName, vector <Data> dataList, int primaryIdx) {
+void QueryManager::opInsert(string tableName, vector <Data> dataList) {
     // 插入数据
     Table *table = this->systemManager->getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
     RID rid = table->exeInsert(dataList);
 
     // 插入索引
-    if (primaryIdx != -1) {
-        VarType type = headerList[primaryIdx].varType == DATE ? INT : (headerList[primaryIdx].varType == CHAR ? VARCHAR : headerList[primaryIdx].varType);
-        this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[primaryIdx].headerName, type, this->bufManager);
-        key_ptr keyPtr;
-        char str[MAX_RECORD_LEN];
-        memset(str, 0, sizeof(str));
-        if (type == INT) {
-            keyPtr = (char*)&dataList[primaryIdx].intVal;
-        } else if (type == FLOAT) {
-            keyPtr = (char*)&dataList[primaryIdx].floatVal;
-        } else {
-            memcpy(str, dataList[primaryIdx].stringVal.c_str(), dataList[primaryIdx].stringVal.size());
-            keyPtr = str;
+    for (int i = 0; i < headerList.size(); i++) {
+        if (headerList[i].hasIndex == true) {
+            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
+            this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[i].headerName, type, this->bufManager);
+            key_ptr keyPtr;
+            char str[MAX_RECORD_LEN];
+            memset(str, 0, sizeof(str));
+            if (type == INT) {
+                keyPtr = (char*)&dataList[i].intVal;
+            } else if (type == FLOAT) {
+                keyPtr = (char*)&dataList[i].floatVal;
+            } else {
+                memcpy(str, dataList[i].stringVal.c_str(), dataList[i].stringVal.size());
+                keyPtr = str;
+            }
+            this->indexHandler->insert(keyPtr, rid);
+            this->indexHandler->closeIndex();
         }
-        this->indexHandler->insert(keyPtr, rid);
-        this->indexHandler->closeIndex();
     }
 
     // 更新外键对应的表的信息
     foreignKeyProcess(headerList, dataList, 1);
 }
 
-void QueryManager::opDelete(string tableName, vector <Data> dataList, RID rid, int primaryIdx) {
+void QueryManager::opDelete(string tableName, vector <Data> dataList, RID rid) {
     // 删除数据
     Table *table = this->systemManager->getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
     table->exeDelete(rid);
 
     // 删除索引
-    if (primaryIdx != -1) {
-        VarType type = headerList[primaryIdx].varType == DATE ? INT : (headerList[primaryIdx].varType == CHAR ? VARCHAR : headerList[primaryIdx].varType);
-        this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[primaryIdx].headerName, type, this->bufManager);
-        key_ptr keyPtr;
-        char str[MAX_RECORD_LEN];
-        memset(str, 0, sizeof(str));
-        if (type == INT) {
-            keyPtr = (char*)&dataList[primaryIdx].intVal;
-        } else if (type == FLOAT) {
-            keyPtr = (char*)&dataList[primaryIdx].floatVal;
-        } else {
-            memcpy(str, dataList[primaryIdx].stringVal.c_str(), dataList[primaryIdx].stringVal.size());
-            keyPtr = str;
+    for (int i = 0; i < headerList.size(); i++) {
+        if (headerList[i].hasIndex == true) {
+            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
+            this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[i].headerName, type, this->bufManager);
+            key_ptr keyPtr;
+            char str[MAX_RECORD_LEN];
+            memset(str, 0, sizeof(str));
+            if (type == INT) {
+                keyPtr = (char*)&dataList[i].intVal;
+            } else if (type == FLOAT) {
+                keyPtr = (char*)&dataList[i].floatVal;
+            } else {
+                memcpy(str, dataList[i].stringVal.c_str(), dataList[i].stringVal.size());
+                keyPtr = str;
+            }
+            this->indexHandler->remove(keyPtr, rid);
+            this->indexHandler->closeIndex();
         }
-        this->indexHandler->remove(keyPtr, rid);
-        this->indexHandler->closeIndex();
     }
 
     // 更新外键对应的表的信息
@@ -526,4 +478,21 @@ void QueryManager::foreignKeyProcess(vector <TableHeader> headerList, vector <Da
             this->indexHandler->closeIndex();
         }
     }
+}
+
+int QueryManager::countKey(string tableName, string headerName, VarType type, int intVal, double floatVal, string stringVal) {
+    VarType indexType = type == DATE ? INT : (type == CHAR ? VARCHAR : type);
+    indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerName, indexType, this->bufManager);
+    int count = 0;
+    if (type == INT) {
+        count = indexHandler->count((char*)&intVal);
+    } else if (type == FLOAT) {
+        count = indexHandler->count((char*)&floatVal);
+    } else {
+        char str[MAX_RECORD_LEN];
+        memcpy(str, stringVal.c_str(), stringVal.size());
+        count = indexHandler->count(str);
+    }
+    indexHandler->closeIndex();
+    return count;
 }

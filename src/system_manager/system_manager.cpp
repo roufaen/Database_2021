@@ -37,7 +37,7 @@ int SystemManager::dropDb(string dbName) {
             Table table(dbName, tableNameList[i], this->bufManager);
             vector <TableHeader> headerList = table.getHeaderList();
             for (int j = 0; j < (int)headerList.size(); j++) {
-                if (headerList[j].isPrimary == true) {
+                if (headerList[j].hasIndex == true) {
                     VarType type = headerList[j].varType == DATE ? INT : (headerList[j].varType == CHAR ? VARCHAR : headerList[j].varType);
                     indexHandler->openIndex("index_" + this->dbName + "_" + tableNameList[i], headerList[j].headerName, type, this->bufManager);
                     indexHandler->removeIndex();
@@ -77,6 +77,7 @@ int SystemManager::closeDb() {
         delete this->tableNameHandler;
         this->tableNameHandler = NULL;
         while (this->tableList.size() > 0) {
+            delete this->tableList.back();
             this->tableList.pop_back();
         }
         return 0;
@@ -110,11 +111,14 @@ int SystemManager::createTable(string tableName, vector <TableHeader> headerList
         }
 
         if (headerList[i].isPrimary == true) {
-            // 不能同时为主键和外键，主键不能为空，主键不能重复
-            if (headerList[i].isForeign == true || headerList[i].permitNull == true || hasPrimary == 1) {
+            // 不能同时为主键和外键，主键不能为空，主键不能有多个
+            if (headerList[i].isForeign == true || hasPrimary == 1) {
                 return -1;
             }
             hasPrimary = 1;
+            // 主键不能重复，主键不能为空
+            headerList[i].isUnique = true;
+            headerList[i].permitNull == false;
         } else if (headerList[i].isForeign == true) {
             // 检查 table 是否存在
             if (!hasTable(headerList[i].foreignTableName)) {
@@ -126,7 +130,7 @@ int SystemManager::createTable(string tableName, vector <TableHeader> headerList
             for (int j = 0; j < (int)foreignHeaderList.size(); j++) {
                 if (headerList[i].foreignHeaderName == foreignHeaderList[j].headerName) {
                     // 检查外键信息是否正确
-                    if (headerList[i].varType != foreignHeaderList[j].varType || headerList[i].len != foreignHeaderList[j].len) {
+                    if (foreignHeaderList[i].isPrimary == false || headerList[i].varType != foreignHeaderList[j].varType || headerList[i].len != foreignHeaderList[j].len) {
                         return -1;
                     }
                     findForeignHeader = 1;
@@ -136,13 +140,24 @@ int SystemManager::createTable(string tableName, vector <TableHeader> headerList
             if (findForeignHeader == 0) {
                 return -1;
             }
+            // 外键允许为空
+            headerList[i].permitNull = true;
         }
+
+        headerList[i].hasIndex = false;
     }
 
     // 新建 table
     Table *table = new Table(this->dbName, tableName, bufManager, headerList);
     this->tableNameHandler->createElement(tableName);
     this->tableList.push_back(table);
+
+    // 创建索引
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].isUnique == true) {
+            createIndex(headerList[i].tableName, headerList[i].headerName);
+        }
+    }
 
     // 修改外键信息
     for (int i = 0; i < (int)headerList.size(); i++) {
@@ -196,7 +211,7 @@ int SystemManager::dropTable(string tableName) {
     }
     // 删除索引
     for (int j = 0; j < (int)headerList.size(); j++) {
-        if (headerList[j].isPrimary == true) {
+        if (headerList[j].hasIndex == true) {
             VarType type = headerList[j].varType == DATE ? INT : (headerList[j].varType == CHAR ? VARCHAR : headerList[j].varType);
             indexHandler->openIndex("index_" + this->dbName + "_" + tableName, headerList[j].headerName, type, this->bufManager);
             indexHandler->removeIndex();
@@ -232,8 +247,67 @@ Table* SystemManager::getTable(string tableName) {
     return NULL;
 }
 
-/*int SystemManager::createIndex(string tableName, string headerName) {
+int SystemManager::createIndex(string tableName, string headerName) {
+    // 检查 table 是否存在
+    if (!hasTable(tableName)) {
+        return -1;
+    }
+    Table *table = getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
+    vector <RID> ridList = table->getRecordList();
+    int idxPos = -1;
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].headerName == headerName) {
+            idxPos = i;
+        }
+    }
+    // 检查 header 是否存在
+    if (idxPos == -1 || headerList[idxPos].hasIndex == true) {
+        return -1;
+    }
+    headerList[idxPos].hasIndex = true;
+    table->writeHeaderList(headerList);
+    VarType type = headerList[idxPos].varType == DATE ? INT : (headerList[idxPos].varType == CHAR ? VARCHAR : headerList[idxPos].varType);
+    this->indexHandler->openIndex(tableName, headerName, type, this->bufManager);
+    for (int i = 0; i < (int)ridList.size(); i++) {
+        vector <Data> dataList = table->exeSelect(ridList[i]);
+        key_ptr keyPtr;
+        char str[MAX_RECORD_LEN];
+        memset(str, 0, sizeof(str));
+        if (type == INT) {
+            keyPtr = (char*)&dataList[idxPos].intVal;
+        } else if (type == FLOAT) {
+            keyPtr = (char*)&dataList[idxPos].floatVal;
+        } else {
+            memcpy(str, dataList[idxPos].stringVal.c_str(), dataList[i].stringVal.size());
+            keyPtr = str;
+        }
+        this->indexHandler->insert(keyPtr, ridList[i]);
+    }
+    this->indexHandler->closeIndex();
 }
 
 int SystemManager::dropIndex(string tableName, string headerName) {
-}*/
+    // 检查 table 是否存在
+    if (!hasTable(tableName)) {
+        return -1;
+    }
+    Table *table = getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
+    vector <RID> ridList = table->getRecordList();
+    int idxPos = -1;
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].headerName == headerName) {
+            idxPos = i;
+        }
+    }
+    // 检查 header 是否存在，如果该 header 要求 unique ，则不可删除索引
+    if (idxPos == -1 || headerList[idxPos].hasIndex == false || headerList[idxPos].isUnique == true) {
+        return -1;
+    }
+    headerList[idxPos].hasIndex = false;
+    table->writeHeaderList(headerList);
+    VarType type = headerList[idxPos].varType == DATE ? INT : (headerList[idxPos].varType == CHAR ? VARCHAR : headerList[idxPos].varType);
+    this->indexHandler->openIndex(tableName, headerName, type, this->bufManager);
+    this->indexHandler->removeIndex();
+}
