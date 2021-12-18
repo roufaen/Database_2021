@@ -11,15 +11,14 @@ Type getValue(const string& str);
 
 void getFromValue(Data& dt, SQLParser::ValueContext* data);
 
-template <class Type>
-std::vector<Type> castVector(antlrcpp::Any& x);
-
 class MyVisitor: public SQLBaseVisitor {
     private:
       QueryManager* qm;
       RecordHandler* rh;
       IndexHandler* ih;
       SystemManager* sm;
+      std::vector<Condition> conditionList;
+
     public:
   MyVisitor(QueryManager* _qm, RecordHandler* _rh, IndexHandler* _ih, SystemManager* _sm){
     qm = _qm;
@@ -89,7 +88,9 @@ class MyVisitor: public SQLBaseVisitor {
         th.headerName = pointer->Identifier()->getText();
         th.isForeign = false;
         th.isPrimary = false;
+        th.isUnique = false;
         th.varType = getVarType(pointer->type_(), th.len);
+        th.hasIndex = false;
         th.permitNull = (pointer->Null() == nullptr);
         tableHeader.push_back(th);
         //TO BE FIXED: Default value?
@@ -101,6 +102,8 @@ class MyVisitor: public SQLBaseVisitor {
             for(auto member:tableHeader)
               if(member.headerName == id->getText()) {
                 member.isPrimary = true;
+                member.hasIndex = true;
+                member.isUnique = true;
                 break;
               }
           }
@@ -111,6 +114,8 @@ class MyVisitor: public SQLBaseVisitor {
               for(auto member:tableHeader)
               if(member.headerName == pointer->Identifier(0)->getText()) {
                 member.isForeign = true;
+                member.foreignTableName = pointer->Identifier(1)->getText();
+                member.foreignHeaderName = pointer->Identifier(2)->getText();
                 break;
               }
 
@@ -153,7 +158,7 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitDelete_from_table(SQLParser::Delete_from_tableContext *ctx) override {
     std::string tableName = ctx->Identifier()->getText();
-    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    visitWhere_and_clause(ctx->where_and_clause());
     if(conditionList.size()) qm->exeDelete(tableName.c_str(), conditionList);
     else cerr << "The condition fails\n";
     return defaultResult();
@@ -163,7 +168,7 @@ class MyVisitor: public SQLBaseVisitor {
     std::string tableName = ctx->Identifier()->getText();
     std::vector<std::string> headerList;
     std::vector<Data> dataList;
-    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    visitWhere_and_clause(ctx->where_and_clause());
     SQLParser::Set_clauseContext* sc = ctx->set_clause();
     auto sc_eq = sc->EqualOrAssign();
     int size = sc_eq.size();
@@ -174,7 +179,8 @@ class MyVisitor: public SQLBaseVisitor {
       headerList.push_back(sc->Identifier(i)->getText());
       dataList.push_back(dt);
     }
-    qm->exeUpdate(tableName, headerList, dataList, conditionList);
+    if (qm->exeUpdate(tableName, headerList, dataList, conditionList)==0) printf("Successfully updated.\n");
+      else printf("Fail to update.\n");
     return defaultResult();
   }
 
@@ -183,7 +189,7 @@ class MyVisitor: public SQLBaseVisitor {
     resData.clear();
     std::vector<std::string> tableNameList;
     std::vector<std::string> selectorList;
-    std::vector<Condition> conditionList = castVector<Condition>(visitWhere_and_clause(ctx->where_and_clause()));
+    visitWhere_and_clause(ctx->where_and_clause());
     tableNameList.clear();
     auto ids = ctx->identifiers()->Identifier();
     for(auto i:ids) 
@@ -193,9 +199,16 @@ class MyVisitor: public SQLBaseVisitor {
     auto sls = ctx->selectors()->selector();
     for(auto i:sls)
     {
+      //selectorList.push_back(i->column()->Identifier(0)->getText());
       selectorList.push_back(i->column()->Identifier(1)->getText());
     }
-    qm->exeSelect(tableNameList, selectorList, conditionList, resData);
+    if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
+      for(auto i:resData){
+        for(auto j:i){
+
+        }
+      }
+    } else printf("Fail to select the data\n");
     return defaultResult();
   }
 
@@ -238,7 +251,6 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override{
-    std::vector<Condition> conditionList;
     conditionList.clear();
     std::vector<SQLParser::Where_clauseContext *> wax = ctx->where_clause();
     for(auto i:wax){
@@ -257,6 +269,8 @@ class MyVisitor: public SQLBaseVisitor {
         cond.rightFloatVal = dt.floatVal;
         cond.rightStringVal = dt.stringVal;
         cond.rightIntVal = dt.intVal;
+        cond.rightNull = dt.isNull;
+        cond.rightType = dt.varType;
       } else if (ec->column() != nullptr) {
         cond.rightTableName = ec->column()->Identifier(0)->getText();
         cond.rightCol = ec->column()->Identifier(1)->getText();
@@ -266,6 +280,6 @@ class MyVisitor: public SQLBaseVisitor {
       }
       conditionList.push_back(cond);
     }
-    return conditionList;
+    return defaultResult();
   }
 };

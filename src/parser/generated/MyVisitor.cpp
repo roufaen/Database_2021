@@ -37,16 +37,19 @@ void getFromValue(Data& dt, SQLParser::ValueContext* data){
     try
     { 
         dt.floatVal = getValue<float>(data->Float()->getText());
+        dt.varType = FLOAT;
     }
     catch(const std::exception& e) {}
     try
     { 
-        dt.intVal = getValue<int>(data->Float()->getText());
+        dt.intVal = getValue<int>(data->Integer()->getText());
+        dt.varType = INT;
     }
     catch(const std::exception& e) {}
     try
     { 
         dt.stringVal = data->String()->getText();
+        dt.varType = VARCHAR;
     }
     catch(const std::exception& e) {}
     try
@@ -54,19 +57,4 @@ void getFromValue(Data& dt, SQLParser::ValueContext* data){
         dt.isNull = ( data->Null() != nullptr );
     }
     catch(const std::exception& e) {}
-}
-
-template <class Type>
-std::vector<Type> castVector(antlrcpp::Any& x){
-    std::vector<Type> vec;
-    vec.clear();
-    try
-    {
-        vec = x.as<std::vector<Type>>();
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return vec;
 }
