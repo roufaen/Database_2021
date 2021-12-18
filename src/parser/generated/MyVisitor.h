@@ -21,46 +21,57 @@ class MyVisitor: public SQLBaseVisitor {
       IndexHandler* ih;
       SystemManager* sm;
     public:
-  MyVisitor(){
-    //TODO
+  MyVisitor(QueryManager* _qm, RecordHandler* _rh, IndexHandler* _ih, SystemManager* _sm){
+    qm = _qm;
+    rh = _rh;
+    ih = _ih;
+    sm = _sm;
   }
   virtual antlrcpp::Any visitCreate_db(SQLParser::Create_dbContext *ctx) override {
-    sm->createDb(ctx->Identifier()->getText());
+    if (sm->createDb(ctx->Identifier()->getText()) == 0) printf("Successfully create the DB\n");
+    else printf("The creation fails.\n");
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitDrop_db(SQLParser::Drop_dbContext *ctx) override {
-    sm->dropDb(ctx->Identifier()->getText());
+    if (sm->dropDb(ctx->Identifier()->getText()) == 0) printf("Successfully drop the DB\n");
+    else printf("The drop fails.\n");
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitShow_dbs(SQLParser::Show_dbsContext *ctx) override {
     //TODO
+    printf("I should show the dbs here, but now no interface\n");
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitUse_db(SQLParser::Use_dbContext *ctx) override {
-    sm->openDb(ctx->Identifier()->getText());
+    if (sm->openDb(ctx->Identifier()->getText()) == 0) printf("Enter the db\n");
+    else printf("Enter fails.\n");
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitShow_tables(SQLParser::Show_tablesContext *ctx) override {
     //TODO
+    printf("I should show the tables here, but now no interface\n");
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitShow_indexes(SQLParser::Show_indexesContext *ctx) override {
     //TODO
+    printf("I should show the indexes here, but now no interface\n");
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
     //TODO
+    printf("I should load data from a file here, but now no interface\n");
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitStore_data(SQLParser::Store_dataContext *ctx) override {
     //TODO
+    printf("I should store data to a file here, but now no interface\n");
     return visitChildren(ctx);
   }
 
@@ -103,11 +114,15 @@ class MyVisitor: public SQLBaseVisitor {
                 break;
               }
 
-          } else cerr << "UNKNOWN TYPE IN PARSING CREATE TABLE\n";
+          } else{
+             cerr << "UNKNOWN TYPE IN PARSING CREATE TABLE\n";
+             return defaultResult();
+          }
         }
       } 
     }
-    sm->createTable(tableName, tableHeader);
+    if(sm->createTable(tableName, tableHeader) == 0) printf("Successfully create the table\n");
+    else printf("Fail to create the table\n");
     return defaultResult();
   }
 
@@ -188,7 +203,7 @@ class MyVisitor: public SQLBaseVisitor {
     std::string tableName = ctx->Identifier()->getText();
     auto headerTable = ctx->identifiers()->Identifier();
     for(auto i:headerTable){
-      sm->createIndex(tableName, i->getText());
+      //sm->createIndex(tableName, i->getText());
     }
     return defaultResult();
   }
@@ -197,7 +212,7 @@ class MyVisitor: public SQLBaseVisitor {
     std::string tableName = ctx->Identifier()->getText();
     auto headerTable = ctx->identifiers()->Identifier();
     for(auto i:headerTable){
-      sm->dropIndex(tableName, i->getText());
+      //sm->dropIndex(tableName, i->getText());
     }
     return defaultResult();
   }
@@ -252,13 +267,5 @@ class MyVisitor: public SQLBaseVisitor {
       conditionList.push_back(cond);
     }
     return conditionList;
-  }
-
-  virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitAggregator(SQLParser::AggregatorContext *ctx) override {
-    return visitChildren(ctx);
   }
 };

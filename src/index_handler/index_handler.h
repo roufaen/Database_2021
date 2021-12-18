@@ -10,9 +10,9 @@ class IndexScan;
 
 class IndexHandler{ //REMINDER: ALWAYS CLOSE BEFORE OPEN
 public:
-    IndexHandler() {nowdata = new char[MAX_RECORD_LEN];}
+    IndexHandler(BufManager* _bm) { bm = _bm; nowdata = new char[MAX_RECORD_LEN];}
     ~IndexHandler() {delete[] nowdata;}
-    void openIndex(std::string tableName, std::string colName, VarType type, BufManager* bm);
+    void openIndex(std::string tableName, std::string colName, VarType type);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
@@ -25,6 +25,7 @@ public:
     std::vector<RID> getRIDs(key_ptr key);
     inline int totalCount();
     void closeIndex();
+    void removeIndex(std::string tableName, std::string colName);
     void removeIndex();
     friend class IndexScan;
 
@@ -63,7 +64,7 @@ public:
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
     {}
 
-    char* getKey();
+    int getKey(char*);
     RID getValue();
     void next();
     void previous();

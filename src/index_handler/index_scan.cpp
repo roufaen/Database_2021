@@ -1,11 +1,11 @@
 #include "index_handler.h"
-char* IndexScan::getKey(){
+int IndexScan::getKey(char* key){
     RID temp = currentNode->data[currentKeyPos].keyPos;
-    char* key;
     if (!tree->keyFile->getRecord(temp, key)) {
         std::cerr << "Did not get the key\n";
+        return -1;
     };
-    return key;
+    return 0;
 }
 
 RID IndexScan::getValue(){

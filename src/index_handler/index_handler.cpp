@@ -34,11 +34,10 @@ int compare(VarType _type, key_ptr a, char* b){
     return 0;
 }
 
-void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type, BufManager* _bm){
+void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type){
     tableName = _tableName;
     colName = _colName;
     type = _type;
-    bm = _bm;
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
     treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), bm);
@@ -47,6 +46,13 @@ void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarTy
         keyFile->createFile(keyFileName);
         keyFile->openFile(keyFileName);
     }
+}
+
+void IndexHandler::removeIndex(std::string _tableName, std::string _colName){
+    std::string treeFileName = tableName + colName + ".tree";
+    std::string keyFileName = tableName + colName + ".key";
+    bm->removeFile(treeFileName.c_str());
+    bm->removeFile(keyFileName.c_str());
 }
 
 void IndexHandler::insert(key_ptr key, RID rid){
@@ -219,8 +225,9 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
 
     IndexScan lb = lowerBound(key);
     IndexScan hb = upperBound(key);
-
-    if(lb.available() && compare(type, key, lb.getKey()) != 0) return ret;
+    
+    lb.getKey(nowdata);
+    if(lb.available() && compare(type, key, nowdata) != 0) return ret;
     
     while(lb.available() && !lb.equals(hb)){
         ret.push_back(lb.getValue());
