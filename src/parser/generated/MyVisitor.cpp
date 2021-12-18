@@ -58,18 +58,3 @@ void getFromValue(Data& dt, SQLParser::ValueContext* data){
     }
     catch(const std::exception& e) {}
 }
-
-template <class Type>
-std::vector<Type> castVector(antlrcpp::Any& x){
-    std::vector<Type> vec;
-    vec.clear();
-    try
-    {
-        vec = x.as<std::vector<Type>>();
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return vec;
-}
