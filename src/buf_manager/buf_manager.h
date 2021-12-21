@@ -167,12 +167,11 @@ public:
 	}
 	
   	void closeFile(int fd){
-		close();
+		this->close();
 		fileManager->closeFile(fd);
 	}
 
 	void removeFile(const char* filename){
-		close();
 		fileManager->removeFile(filename);
 	}
 

@@ -1,12 +1,13 @@
 #include "index_handler.h"
 #include <cstdio>
 #include <iostream>
+unsigned char MyBitMap::ha[]={0};
 int main(){
+    std::cout << sizeof(BPlusNode) << std::endl;
     MyBitMap::initConst();
     BufManager* bm = new BufManager();
     IndexHandler* ih = new IndexHandler(bm);
     ih->openIndex("db","col",INT);
-    cout << "MBG: " << MyBitMap::getIndex(2) << endl;
     printf("Built\n");
     for(int i=0; i<10000; i++){
         ih->insert((char*)&i, RID{i,i});
@@ -15,6 +16,13 @@ int main(){
         if( i>=1 && ih->greaterCount((char*)&index) != i-1) break;
     }
     int index = 1;
+    ih->insert((char*)&index, RID{10,20});
+    ih->debug();
+    ih->closeIndex();
+    ih->openIndex("db","col",INT);
+    ih->debug();
+    ih->insert((char*)&index, RID{10,20});
+    index = 1;
     printf("Is there any 1? %d\n", ih->count((char*)&index));
     index = 10;
     printf("Is there any 10? %d\n", ih->has((char*)&index));

@@ -15,7 +15,6 @@ void IndexFileHandler::openFile(const char* fileName){
         header->lastLeaf = 1;
         header->sum = 0;
         bm->markDirty(headerIndex);
-        bm->access(headerIndex);
 
         int index;
         BPlusNode* root = (BPlusNode*)bm->allocPage(fileID, 1, index);
@@ -24,16 +23,21 @@ void IndexFileHandler::openFile(const char* fileName){
         root->nodeType = ix::LEAF;
         root->pageId = 1;
         root->recs = 0;
-        markPageDirty(index);
+        bm->markDirty(index);
 
     }
     else header = (IndexFileHeader*)bm->getPage(fileID, 0, headerIndex);
+    // std::cout << "Header root page ID is " << header->firstLeaf << " " << header->lastLeaf << " " << header->rootPageId << std::endl;
 }
 
 IndexFileHandler::~IndexFileHandler(){
     closeFile();
 }
 
+void IndexFileHandler::access(int index){
+    bm->access(headerIndex);
+    bm->access(index);
+}
 char* IndexFileHandler::newPage(int &index){
     header->pageCount++;
     char* res = bm->getPage(fileID, header->pageCount, index);
@@ -50,7 +54,6 @@ char* IndexFileHandler::getPage(int pageID, int& index){
 
 
 void IndexFileHandler::markHeaderPageDirty(){
-    bm->access(headerIndex);
     bm->markDirty(headerIndex);
 }
 
@@ -60,7 +63,7 @@ void IndexFileHandler::markPageDirty(int index){
 
 void IndexFileHandler::closeFile(){
     if (bm != nullptr){
-        bm->close();
+        // std::cout << "Header root page ID is " << header->firstLeaf << " " << header->lastLeaf << " " << header->rootPageId << std::endl;
         bm->closeFile(fileID);
     }
 }

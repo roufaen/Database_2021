@@ -14,6 +14,7 @@ public:
     struct IndexFileHeader* header;
 
     void openFile(const char* fileName);
+    void access(int index);
     char* newPage(int &index);
     char* getPage(int pageID, int &index);
     void markHeaderPageDirty();

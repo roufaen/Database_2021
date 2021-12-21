@@ -8,7 +8,9 @@
 
 class IndexScan;
 
-class IndexHandler{ //REMINDER: ALWAYS CLOSE BEFORE OPEN
+//使用IndexHandler时请注意
+//及时关闭索引，如果在BufManager进行close()后使用必须重新打开
+class IndexHandler{ 
 public:
     IndexHandler(BufManager* _bm) { 
         bm = _bm; 
@@ -19,6 +21,7 @@ public:
     ~IndexHandler() {
         delete[] nowdata;
         delete keyFile;
+        delete treeFile;
     }
     void openIndex(std::string tableName, std::string colName, VarType type);
     void insert(key_ptr key, RID rid);
@@ -31,10 +34,11 @@ public:
     IndexScan lowerBound(key_ptr key);
     IndexScan upperBound(key_ptr key);
     std::vector<RID> getRIDs(key_ptr key);
-    inline int totalCount();
+    int totalCount();
     void closeIndex();
     void removeIndex(std::string tableName, std::string colName);
     void removeIndex();
+    void debug();
     friend class IndexScan;
 
 private:

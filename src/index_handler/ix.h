@@ -24,22 +24,22 @@ struct IndexRecord{
     //for intermediate page: pointer right to this page
 
 struct BPlusNode{
+    IndexRecord data[maxIndexPerPage];
     ix::NodeType nodeType;
     int pageId;
     int recs;
     int prevPage;
     int nextPage;   //-1 for nonexistent
-    IndexRecord data[maxIndexPerPage];
 };
 
 struct BPlusOverflowPage{
+    RID data[maxIndexPerPage];
     ix::NodeType nodeType;
     int pageId;
     int recs;
     int prevPage;
     int nextPage;
     int fatherPage;
-    RID data[maxIndexPerPage];
 };
 
 struct IndexFileHeader{
