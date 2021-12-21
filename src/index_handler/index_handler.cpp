@@ -40,8 +40,7 @@ void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarTy
     type = _type;
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
-    treeFile = make_shared<IndexFileHandler>(treeFileName.c_str(), bm);
-    keyFile = make_shared<RecordHandler>(bm);
+    treeFile->openFile(treeFileName.c_str());
     if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
         keyFile->createFile(keyFileName);
         keyFile->openFile(keyFileName);
@@ -239,11 +238,9 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
 void IndexHandler::closeIndex(){
     if(treeFile != nullptr) {
         treeFile->closeFile();
-        treeFile = nullptr;
     }
     if(keyFile != nullptr) {
         keyFile->closeFile();
-        keyFile = nullptr;
     }
 }
 

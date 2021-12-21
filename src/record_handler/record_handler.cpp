@@ -1,6 +1,6 @@
 # include "record_handler.h"
 
-RecordHandler::RecordHandler(BufManager *bufManager) : bufManager(bufManager) {
+RecordHandler::RecordHandler(BufManager *_bufManager) : bufManager(_bufManager) {
     this->fileID = -1;
 }
 

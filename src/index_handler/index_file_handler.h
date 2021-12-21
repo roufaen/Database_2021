@@ -6,13 +6,14 @@
 
 class IndexFileHandler{
 public:
-    IndexFileHandler(const char* fileName, BufManager* _bm);
+    IndexFileHandler(BufManager* _bm);
     ~IndexFileHandler();
 
     BufManager* bm;
     int fileID, headerIndex, currentPage, currentIndex;
     struct IndexFileHeader* header;
 
+    void openFile(const char* fileName);
     char* newPage(int &index);
     char* getPage(int pageID, int &index);
     void markHeaderPageDirty();

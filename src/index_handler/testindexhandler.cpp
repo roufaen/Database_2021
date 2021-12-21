@@ -2,7 +2,11 @@
 #include <cstdio>
 #include <iostream>
 int main(){
-    IndexHandler* ih = new IndexHandler("test", "name", INT);
+    MyBitMap::initConst();
+    BufManager* bm = new BufManager();
+    IndexHandler* ih = new IndexHandler(bm);
+    ih->openIndex("db","col",INT);
+    cout << "MBG: " << MyBitMap::getIndex(2) << endl;
     printf("Built\n");
     for(int i=0; i<10000; i++){
         ih->insert((char*)&i, RID{i,i});
