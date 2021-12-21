@@ -25,7 +25,6 @@ int RecordHandler::createFile(string fileName) {
         newHeader.slotMapOffset = MAX_RECORD_LEN * 3;
         newHeader.slotMapSize = ceil(newHeader.recordPerPage / 8.0);
         memcpy(page, &newHeader, sizeof(newHeader));
-        this->bufManager->close();
         this->bufManager->closeFile(newFileID);
         return 0;
     }
@@ -71,6 +70,10 @@ int RecordHandler::closeFile() {
     if (this->fileID == -1) {
         return -1;
     } else {
+        int idx = -1;
+        BufType headerPage = this->bufManager->getPage(this->fileID, 0, idx);
+        this->bufManager->markDirty(idx);
+        memcpy(headerPage, &this->header, sizeof(this->header));
         this->bufManager->closeFile(this->fileID);
         this->fileID = -1;
         return 0;
@@ -99,6 +102,7 @@ int RecordHandler::getRecord(const RID &rid, char *pData) {
     } else {
         int idx = -1;
         BufType page = this->bufManager->getPage(this->fileID, rid.pageID, idx);
+        this->bufManager->access(idx);
         if ((page[this->header.slotMapOffset + rid.slotID / 8] & (1 << (rid.slotID % 8))) == 0) {
             return -1;
         }
