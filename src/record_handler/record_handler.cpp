@@ -185,7 +185,7 @@ vector <RID> RecordHandler::getRecordList() {
     for (int i = 1, idx = -1; i <= this->header.pageNum; i++) {
         BufType page = this->bufManager->getPage(this->fileID, i, idx);
         for (int j = 0; j < this->header.recordPerPage; j++) {
-            if ((page[this->header.slotMapOffset + j / 8] & (1 << (j % 8))) == 1) {
+            if ((page[this->header.slotMapOffset + j / 8] & (1 << (j % 8))) != 0) {
                 rid.pageID = i, rid.slotID = j;
                 rids.push_back(rid);
             }

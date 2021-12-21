@@ -1,10 +1,14 @@
 #include "query_manager/query_manager.h"
 #include "system_manager/system_manager.h"
 #include <assert.h>
+#include <stdlib.h>
 using namespace std;
 
 unsigned char MyBitMap::ha[] = {0};
 int main(){
+    system("rm -rf *.dat");
+    system("rm -rf *.key");
+    system("rm -rf *.tree");
     MyBitMap::initConst();
     BufManager* bm = new BufManager();
     //RecordHandler* rh = new RecordHandler(bm);
@@ -54,7 +58,7 @@ int main(){
     resData.clear();
     qm->exeSelect(tableName, selectorList, conditionList, resData);
     for(auto i:resData){
-        cout << i[0].stringVal <<  " " << i[2].floatVal << endl;
+        cout << i[0].stringVal <<  " " << i[1].floatVal << endl;
     }
 
     conditionList.clear();

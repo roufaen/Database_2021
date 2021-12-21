@@ -29,8 +29,8 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
             Table *table = this->systemManager->getTable(tableNameList[i]);
             tableList.push_back(table);
             vector <TableHeader> originalHeaderList = table->getHeaderList();
-            for (int j = 0; j < (int)originalHeaderList.size(); i++) {
-                headerList.push_back(originalHeaderList[i]);
+            for (int j = 0; j < (int)originalHeaderList.size(); j++) {
+                headerList.push_back(originalHeaderList[j]);
             }
             vector <RID> rids = table->getRecordList();
             ridList.push_back(rids);
@@ -41,7 +41,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
         vector <TableHeader> originalHeaderList = tableList[tableMap[tableNameList[i]]]->getHeaderList();
         bool headerFind = false;
         for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-            if (originalHeaderList[i].headerName == selectorList[i]) {
+            if (originalHeaderList[j].headerName == selectorList[i]) {
                 headerFind = true;
             }
         }

@@ -51,7 +51,7 @@ vector <Data> Table::exeSelect(RID rid) {
                 } else if (data.varType == INT || data.varType == DATE) {
                     memcpy(&data.intVal, ptr, sizeof(int));
                 } else if (data.varType == FLOAT) {
-                    memcpy(&data.floatVal, ptr, sizeof(int));
+                    memcpy(&data.floatVal, ptr, sizeof(double));
                 }
             }
             ptr += siz;

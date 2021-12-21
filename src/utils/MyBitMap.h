@@ -200,12 +200,12 @@ public:
 		for (i = 0; i < size;++i){
 			if (data[i] !=0)break;
 		}*/
-		//cout << "nPosi " << i << " " << getLeafData(i) << endl;
+		// cout << "nPosi " << i << " " << getLeafData(i) << endl;
 		// cout << "getting i is " << i << endl;
 		// cout << "getting data[0] is " << data[0] << endl;
 		uint lb = lowbit(getLeafData(i));
 		int index = MyBitMap::getIndex(_hash(lb));
-		cout << "Getting lb is " << lb << " ,index is "<< index << std::endl;
+		// cout << "Getting lb is " << lb << " ,index is "<< index << std::endl;
 		return (i << BIAS) + index;
 	}
 	MyBitMap(int cap, uint k) {
