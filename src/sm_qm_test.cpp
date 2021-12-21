@@ -3,7 +3,9 @@
 #include <assert.h>
 using namespace std;
 
+unsigned char MyBitMap::ha[] = {0};
 int main(){
+    MyBitMap::initConst();
     BufManager* bm = new BufManager();
     //RecordHandler* rh = new RecordHandler(bm);
     IndexHandler* ih = new IndexHandler(bm);
@@ -39,6 +41,7 @@ int main(){
 
     std::vector<std::string> tableName;
     tableName.clear();
+    tableName.push_back("teacher");
     tableName.push_back("teacher");
     std::vector<std::string> selectorList;
     selectorList.clear();

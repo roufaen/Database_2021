@@ -16,7 +16,7 @@ using namespace std;
 //#define MOD 61
 #define BIAS 5
 
-static unsigned char ha[61];
+// static unsigned char ha[61];
 
 class MyBitMap {
 protected:
@@ -24,7 +24,7 @@ protected:
 //	static const int MAX_LEVEL = 5;
 //	static const int MAX_INNER_NUM = 10;
 // static const int MOD1 = 61;	
-// static unsigned char ha[MOD1];
+    static unsigned char ha[61];
 	static uint getMask(int k) {
 		uint s = 0;
 		for (int i = 0; i < k; ++ i) {
@@ -205,6 +205,7 @@ public:
 		// cout << "getting data[0] is " << data[0] << endl;
 		uint lb = lowbit(getLeafData(i));
 		int index = MyBitMap::getIndex(_hash(lb));
+		cout << "Getting lb is " << lb << " ,index is "<< index << std::endl;
 		return (i << BIAS) + index;
 	}
 	MyBitMap(int cap, uint k) {
