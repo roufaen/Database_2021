@@ -191,15 +191,12 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<std::string> selectorList;
     visitWhere_and_clause(ctx->where_and_clause());
     tableNameList.clear();
-    auto ids = ctx->identifiers()->Identifier();
-    for(auto i:ids) 
-      tableNameList.push_back(i->getText());
     //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
     //NO GROUPED SEARCH SUPPORTED
     auto sls = ctx->selectors()->selector();
     for(auto i:sls)
     {
-      //selectorList.push_back(i->column()->Identifier(0)->getText());
+      tableNameList.push_back(i->column()->Identifier(0)->getText());
       selectorList.push_back(i->column()->Identifier(1)->getText());
     }
     if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {

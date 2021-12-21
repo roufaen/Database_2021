@@ -121,8 +121,10 @@ public:
 	 */
 	bool openFile(const char* name, int& fileID) {
 		fileID = fm->findLeftOne();
-		fm->setBit(fileID, 0);
-		return (_openFile(name, fileID) != -1);
+		fm->setBit(fileID, 0); 
+		if (_openFile(name, fileID) != -1) return true;
+		fm->setBit(fileID, 1); 
+		return false;
 	}
 
 	/*

@@ -10,8 +10,16 @@ class IndexScan;
 
 class IndexHandler{ //REMINDER: ALWAYS CLOSE BEFORE OPEN
 public:
-    IndexHandler(BufManager* _bm) { bm = _bm; nowdata = new char[MAX_RECORD_LEN];}
-    ~IndexHandler() {delete[] nowdata;}
+    IndexHandler(BufManager* _bm) { 
+        bm = _bm; 
+        keyFile = new RecordHandler(bm); 
+        treeFile = new IndexFileHandler(bm);
+        nowdata = new char[MAX_RECORD_LEN];
+    }
+    ~IndexHandler() {
+        delete[] nowdata;
+        delete keyFile;
+    }
     void openIndex(std::string tableName, std::string colName, VarType type);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
@@ -33,8 +41,8 @@ private:
     string tableName, colName;
     VarType type;
 
-    shared_ptr<IndexFileHandler> treeFile = nullptr;
-    shared_ptr<RecordHandler> keyFile = nullptr;
+    IndexFileHandler* treeFile;
+    RecordHandler* keyFile;
     BufManager* bm;
     char* nowdata;
 

@@ -1,21 +1,24 @@
 #include "index_file_handler.h"
 
-IndexFileHandler::IndexFileHandler(const char* fileName, BufManager* _bm){
+IndexFileHandler::IndexFileHandler(BufManager* _bm){
     bm = _bm;
+}
+void IndexFileHandler::openFile(const char* fileName){
     fileID = bm->openFile(fileName);
     if (fileID == -1){
         bm->createFile(fileName);
         fileID = bm->openFile(fileName);
-        header = (IndexFileHeader*)bm->getPage(fileID, 0, headerIndex);
+        header = (IndexFileHeader*)bm->allocPage(fileID, 0, headerIndex);
         header->rootPageId = 1;
         header->pageCount = 1;
         header->firstLeaf = 1;
         header->lastLeaf = 1;
         header->sum = 0;
         bm->markDirty(headerIndex);
+        bm->access(headerIndex);
 
         int index;
-        BPlusNode* root = (BPlusNode*)bm->getPage(fileID, 1, index);
+        BPlusNode* root = (BPlusNode*)bm->allocPage(fileID, 1, index);
         root->nextPage = 0;
         root->prevPage = 0;
         root->nodeType = ix::LEAF;
@@ -59,6 +62,5 @@ void IndexFileHandler::closeFile(){
     if (bm != nullptr){
         bm->close();
         bm->closeFile(fileID);
-        bm=nullptr;
     }
 }
