@@ -241,13 +241,8 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
 }
 
 void IndexHandler::closeIndex(){
-    if(treeFile != nullptr) {
-        int* last = (int*)treeFile->header;
-        treeFile->closeFile();
-    }
-    if(keyFile != nullptr) {
-        keyFile->closeFile();
-    }
+    keyFile->closeFile();
+    treeFile->closeFile();
 }
 
 void IndexHandler::removeIndex() {
@@ -259,8 +254,9 @@ void IndexHandler::removeIndex() {
 void IndexHandler::debug(){
     int index;
     BPlusNode* node = (BPlusNode*)(treeFile->getPage(treeFile->header->rootPageId, index));
-    for(int i=0; i<50; i++){
-        cout << node->data[i].value.pageID << std::endl;
+    for(int i=0; i<49; i++){
+        keyFile->getRecord(node->data[i].keyPos,nowdata);
+        cout << node->data[i].keyPos.pageID << " " << *((int*)nowdata) << std::endl;
     }
     treeFile->markPageDirty(index);
 }
@@ -602,6 +598,7 @@ int IndexHandler::getCountIn(int pageID, key_ptr key){
             if(compare(type, key, nowdata) < 0) break;
         }
         i--;
+        std::cout<<i<<" " << node->data[i].value.pageID << std::endl;
         return getCountIn(node->data[i].value.pageID, key);
     } 
     return -1;
