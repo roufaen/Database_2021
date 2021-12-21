@@ -5,7 +5,7 @@ using namespace std;
 
 int main(){
     BufManager* bm = new BufManager();
-    RecordHandler* rh = new RecordHandler(bm);
+    //RecordHandler* rh = new RecordHandler(bm);
     IndexHandler* ih = new IndexHandler(bm);
     SystemManager* sm = new SystemManager(ih, bm);
     QueryManager* qm = new QueryManager(ih, sm, bm);
@@ -56,7 +56,7 @@ int main(){
 
     conditionList.clear();
     conditionList.push_back(Condition{ConditionType::LESS, INT, false, true, "teacher", "teacher",  "id", "id", "", 0, 0});
-    std::vector<std::vector<Data>> resData;
+    //std::vector<std::vector<Data>> resData;
     resData.clear();
     qm->exeSelect(tableName, selectorList, conditionList, resData);
     cout << resData.size() << endl;
@@ -118,11 +118,11 @@ int main(){
     selectorList.clear();
     selectorList.push_back("name");
     selectorList.push_back("course_name");
-    std::vector<Condition> conditionList;
+    //std::vector<Condition> conditionList;
     conditionList.clear();
     conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 105, 0});
     conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 105, 0});
-    std::vector<std::vector<Data>> resData;
+    //std::vector<std::vector<Data>> resData;
     resData.clear();
     qm->exeSelect(tableName, selectorList, conditionList, resData);
     for(auto i:resData){

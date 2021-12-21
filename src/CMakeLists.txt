@@ -9,5 +9,5 @@ add_definitions(-DDEBUG)
 add_definitions("-Wall -g")
 
 add_library(${CMAKE_PROJECT_NAME}_lib ${SOURCE} ${HEADERS})
-add_executable(${CMAKE_PROJECT_NAME} record_handler_test.cpp)
+add_executable(${CMAKE_PROJECT_NAME} sm_qm_test.cpp)
 target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_PROJECT_NAME}_lib)

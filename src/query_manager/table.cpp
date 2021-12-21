@@ -3,7 +3,7 @@
 Table::Table(string dbName, string tableName, BufManager *bufManager) {
     this->dbName = dbName, this->tableName = tableName;
     // open file
-    string fileName = "table_" + dbName + "_" + tableName;
+    string fileName = "table_" + dbName + "_" + tableName + ".dat";
     this->recordHandler = new RecordHandler(bufManager);
     this->recordHandler->openFile(fileName);
     this->headerList = getHeaderList();
@@ -12,7 +12,7 @@ Table::Table(string dbName, string tableName, BufManager *bufManager) {
 Table::Table(string dbName, string tableName, BufManager *bufManager, vector <TableHeader> headerList) {
     this->dbName = dbName, this->tableName = tableName;
     // create file
-    string fileName = "table_" + dbName + "_" + tableName;
+    string fileName = "table_" + dbName + "_" + tableName + ".dat";
     this->recordHandler = new RecordHandler(bufManager);
     this->recordHandler->createFile(fileName);
     this->recordHandler->openFile(fileName);

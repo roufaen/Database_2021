@@ -88,6 +88,7 @@ int RecordHandler::writeHeader(char *pData) {
     int idx = -1;
     BufType page = this->bufManager->getPage(this->fileID, 0, idx);
     memcpy(page + sizeof(header), pData, MAX_RECORD_LEN);
+    this->bufManager->markDirty(idx);
     this->bufManager->writeBack(idx);
     return 0;
 }
@@ -112,6 +113,7 @@ int RecordHandler::deleteRecord(const RID &rid) {
     } else {
         int idx = -1;
         BufType page = this->bufManager->getPage(this->fileID, rid.pageID, idx);
+        this->bufManager->markDirty(idx);
         if ((page[this->header.slotMapOffset + rid.slotID / 8] & (1 << (rid.slotID % 8))) == 0) {
             return -1;
         } else {

@@ -3,12 +3,13 @@
 NameHandler::NameHandler(BufManager *bufManager) {
     this->bufManager = bufManager;
     this->recordHandler = new RecordHandler(bufManager);
-    if (!this->recordHandler->openFile("header.dat")) {
+    if (this->recordHandler->openFile("header.dat") == -1) {
         this->recordHandler->createFile("header.dat");
         this->recordHandler->openFile("header.dat");
         this->elementNameList.clear();
+        writeElementList(this->elementNameList);
     } else {
-        this->elementNameList = this->readElementList();
+        this->elementNameList = readElementList();
     }
     this->dbName = "";
 }
@@ -16,12 +17,13 @@ NameHandler::NameHandler(BufManager *bufManager) {
 NameHandler::NameHandler(BufManager *bufManager, string dbName) {
     this->bufManager = bufManager;
     this->recordHandler = new RecordHandler(bufManager);
-    if (!this->recordHandler->openFile("header_" + dbName + ".dat")) {
+    if (this->recordHandler->openFile("header_" + dbName + ".dat") == -1) {
         this->recordHandler->createFile("header_" + dbName + ".dat");
         this->recordHandler->openFile("header_" + dbName + ".dat");
         this->elementNameList.clear();
+        writeElementList(this->elementNameList);
     } else {
-        this->elementNameList = this->readElementList();
+        this->elementNameList = readElementList();
     }
     this->dbName = dbName;
 }
@@ -80,6 +82,7 @@ vector <string> NameHandler::readElementList() {
     char *ptr = headerChar + sizeof(int);
     for (int i = 0; i < headerNum; i++) {
         int stringLen = *((int*)ptr);
+        ptr += sizeof(int);
         char ch = *(ptr + stringLen);
         *(ptr + stringLen) = 0;
         headerList.push_back(ptr);
