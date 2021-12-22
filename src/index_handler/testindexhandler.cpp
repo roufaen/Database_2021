@@ -15,13 +15,10 @@ int main(){
         int index = 1;
         if( i>=1 && ih->greaterCount((char*)&index) != i-1) break;
     }
-    ih->debug();
     ih->closeIndex();
     ih->openIndex("db","col",INT);
-    ih->debug();
-    // ih->insert((char*)&index, RID{10,20});
-    // index = 1;
-    // printf("Is there any 1? %d\n", ih->count((char*)&index));
+    int index = 1;
+    printf("Is there any 1? %d\n", ih->count((char*)&index));
     int index = 10;
     printf("Is there any 10? %d\n", ih->has((char*)&index));
     index = 1;
