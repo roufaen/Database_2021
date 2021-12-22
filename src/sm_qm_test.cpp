@@ -40,7 +40,7 @@ int main(){
         dt.varType = FLOAT;
         data.push_back(dt);
         assert(qm->exeInsert("teacher", data) == 0);
-        assert(qm->exeInsert("student", data));
+        assert(qm->exeInsert("student", data) == -1);
     }
 
     std::vector<std::string> tableName;
@@ -81,13 +81,13 @@ int main(){
     dt.floatVal = (float)111;
     dt.varType = FLOAT;
     data.push_back(dt);
-    assert(qm->exeInsert("teacher", data));
+    assert(qm->exeInsert("teacher", data) == -1);
 
     tableHeader.clear();
     tableHeader.push_back(TableHeader{"course", "id", "", "", INT, 4, 0, true, false, true, false, true});
     tableHeader.push_back(TableHeader{"course", "course_name", "", "", VARCHAR, 10, 0, false, false, false, false, false});
     tableHeader.push_back(TableHeader{"course", "teacher", "teacher", "id", INT, 4, 0, false, true, false, false, false});
-    assert(sm->createTable("course", tableHeader)==0);
+    assert(sm->createTable("course", tableHeader) == 0);
     
     for(int i=0;i<10;i++){
         vector<Data> data;
@@ -117,7 +117,7 @@ int main(){
     dt.intVal = 11;
     dt.varType = INT;
     data.push_back(dt);
-    assert(qm->exeInsert("course", data));
+    assert(qm->exeInsert("course", data) == -1);
 
     tableName.clear();
     tableName.push_back("teacher");
@@ -127,26 +127,30 @@ int main(){
     selectorList.push_back("course_name");
     //std::vector<Condition> conditionList;
     conditionList.clear();
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 105, 0});
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 105, 0});
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 85, 0});
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 85, 0});
     //std::vector<std::vector<Data>> resData;
     resData.clear();
     qm->exeSelect(tableName, selectorList, conditionList, resData);
     for(auto i:resData){
-        cout << i[0].stringVal <<  " " << i[2].floatVal << endl;
+        cout << i[0].stringVal <<  " " << i[1].stringVal << endl;
     }
 
     conditionList.clear();
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 105, 0});
-    assert(qm->exeDelete("teacher", conditionList));
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 85, 0});
+    assert(qm->exeDelete("teacher", conditionList) == -1);
 
     conditionList.clear();
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 105, 0});
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 85, 0});
     assert(qm->exeDelete("course", conditionList) == 0);
 
     conditionList.clear();
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 105, 0});
-    assert(qm->exeDelete("teacher", conditionList) == 0);   
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 85, 0});
+    assert(qm->exeDelete("teacher", conditionList) == 0);
+
+    conditionList.clear();
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 75, 0});
+    assert(qm->exeDelete("teacher", conditionList) == -1);
 
     return 0; 
 }

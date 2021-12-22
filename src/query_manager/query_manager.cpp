@@ -151,7 +151,7 @@ int QueryManager::exeDelete(string tableName, vector <Condition> conditionList) 
     }
 
     // 删除数据和索引
-    for (int i = 0; i < (int)headerList.size(); i++) {
+    for (int i = 0; i < (int)ridList.size(); i++) {
         vector <Data> dataList = table->exeSelect(ridList[i]);
         if (conditionJudge(headerList, dataList, conditionList)) {
             this->systemManager->opDelete(tableName, dataList, ridList[i]);
