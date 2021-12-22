@@ -57,7 +57,7 @@ void IndexHandler::removeIndex(std::string _tableName, std::string _colName){
 void IndexHandler::insert(key_ptr key, RID rid){
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
-    // std::cout << rootIndex << std::endl;
+    std::cout << "root is " << treeFile->header->rootPageId << std::endl;
     if(root->recs == maxIndexPerPage){
         if(root->nodeType == ix::NodeType::LEAF){
             treeFile->markPageDirty(rootIndex);
@@ -272,7 +272,8 @@ void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
         }
         i--;
         if(i>=0) keyFile->getRecord(node->data[i].keyPos, nowdata);
-        if(i>=0 && i<node->recs && compare(type, key, nowdata) == 0){        
+        if(i>=0 && i<node->recs && compare(type, key, nowdata) == 0){    
+            // std::cout << "We meet the overflow page " << *((int*)key) <<std::endl;    
             insertIntoOverflowPage(key, rid, node, i);
             treeFile->markPageDirty(index);
         } else {
@@ -598,7 +599,7 @@ int IndexHandler::getCountIn(int pageID, key_ptr key){
             if(compare(type, key, nowdata) < 0) break;
         }
         i--;
-        std::cout<<i<<" " << node->data[i].value.pageID << std::endl;
+        //std::cout<<i<<" " << node->data[i].value.pageID << std::endl;
         return getCountIn(node->data[i].value.pageID, key);
     } 
     return -1;

@@ -2,19 +2,21 @@
 
 IndexFileHandler::IndexFileHandler(BufManager* _bm){
     bm = _bm;
+    header = new IndexFileHeader;
 }
 void IndexFileHandler::openFile(const char* fileName){
     fileID = bm->openFile(fileName);
+    int headerIndex;
     if (fileID == -1){
         bm->createFile(fileName);
         fileID = bm->openFile(fileName);
-        header = (IndexFileHeader*)bm->allocPage(fileID, 0, headerIndex);
+        IndexFileHeader* tempHeader = (IndexFileHeader*)bm->allocPage(fileID, 0, headerIndex);
+        headerChanged = true;
         header->rootPageId = 1;
         header->pageCount = 1;
         header->firstLeaf = 1;
         header->lastLeaf = 1;
         header->sum = 0;
-        bm->markDirty(headerIndex);
 
         int index;
         BPlusNode* root = (BPlusNode*)bm->allocPage(fileID, 1, index);
@@ -24,21 +26,23 @@ void IndexFileHandler::openFile(const char* fileName){
         root->pageId = 1;
         root->recs = 0;
         bm->markDirty(index);
-
     }
-    else header = (IndexFileHeader*)bm->getPage(fileID, 0, headerIndex);
-    // std::cout << "Header root page ID is " << header->firstLeaf << " " << header->lastLeaf << " " << header->rootPageId << std::endl;
+    else {
+        IndexFileHeader* tempHeader = (IndexFileHeader*)bm->getPage(fileID, 0, headerIndex);
+        memcpy(header, tempHeader, sizeof(IndexFileHeader));
+    }
 }
 
 IndexFileHandler::~IndexFileHandler(){
+    delete header;
     closeFile();
 }
 
 void IndexFileHandler::access(int index){
-    bm->access(headerIndex);
     bm->access(index);
 }
 char* IndexFileHandler::newPage(int &index){
+    // std::cout << "Apply for a new page" << std::endl;
     header->pageCount++;
     char* res = bm->getPage(fileID, header->pageCount, index);
     ((BPlusNode*)res)->pageId = header->pageCount;
@@ -48,13 +52,12 @@ char* IndexFileHandler::newPage(int &index){
 }
 
 char* IndexFileHandler::getPage(int pageID, int& index){
-    bm->access(headerIndex);
     return bm->getPage(fileID, pageID, index);
 }
 
 
 void IndexFileHandler::markHeaderPageDirty(){
-    bm->markDirty(headerIndex);
+    headerChanged = true;
 }
 
 void IndexFileHandler::markPageDirty(int index){
@@ -63,7 +66,10 @@ void IndexFileHandler::markPageDirty(int index){
 
 void IndexFileHandler::closeFile(){
     if (bm != nullptr){
-        // std::cout << "Header root page ID is " << header->firstLeaf << " " << header->lastLeaf << " " << header->rootPageId << std::endl;
+        int headerIndex;
+        IndexFileHeader* tempHeader = (IndexFileHeader*)bm->getPage(fileID, 0, headerIndex);
+        memcpy(tempHeader, header, sizeof(IndexFileHeader));
+        this->markPageDirty(headerIndex);
         bm->closeFile(fileID);
     }
 }

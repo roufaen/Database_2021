@@ -2,7 +2,7 @@
 int IndexScan::getKey(char* key){
     RID temp = currentNode->data[currentKeyPos].keyPos;
     if (tree->keyFile->getRecord(temp, key) == -1) {
-        std::cerr << "Did not get the key\n";
+        std::cerr << "Did not get the key " << temp.pageID << " " << temp.slotID << std::endl;
         return -1;
     };
     return 0;

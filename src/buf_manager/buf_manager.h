@@ -126,11 +126,24 @@ public:
 		if (dirty[index]) {
 			int f, p;
 			hash->getKeys(index, f, p);
+			if(f==-1) std::cerr << "This page has been cleaned\n";
 			fileManager->writePage(f, p, addr[index], 0);
 			dirty[index] = false;
 		}
 		replace->free(index);
 		hash->remove(index);
+	}
+	void writeBack(int index, int fileID) {
+		int f, p;
+		hash->getKeys(index, f, p);
+		if(f==fileID) {
+			if(dirty[index]) {
+				fileManager->writePage(f, p, addr[index], 0);
+				dirty[index] = false;
+			}
+			replace->free(index);
+			hash->remove(index);
+		} else return;
 	}
 	/*
 	 * @函数名close
@@ -139,6 +152,11 @@ public:
 	void close() {
 		for (int i = 0; i < CAP; ++ i) {
 			writeBack(i);
+		}
+	}
+	void close(int fileID) {
+		for (int i = 0; i < CAP; ++ i) {
+			writeBack(i, fileID);
 		}
 	}
 	/*
@@ -166,8 +184,9 @@ public:
 		return -1;
 	}
 	
-  	void closeFile(int fd){
-		this->close();
+  	void closeFile(int fd,bool all=false){
+		if(all) this->close();
+		else this->close(fd);
 		fileManager->closeFile(fd);
 	}
 

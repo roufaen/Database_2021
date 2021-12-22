@@ -5,12 +5,14 @@
 #include "../buf_manager/buf_manager.h"
 
 class IndexFileHandler{
+private:
+    bool headerChanged;
 public:
     IndexFileHandler(BufManager* _bm);
     ~IndexFileHandler();
 
     BufManager* bm;
-    int fileID, headerIndex, currentPage, currentIndex;
+    int fileID, currentPage, currentIndex;
     struct IndexFileHeader* header;
 
     void openFile(const char* fileName);

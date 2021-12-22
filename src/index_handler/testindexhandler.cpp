@@ -9,20 +9,26 @@ int main(){
     IndexHandler* ih = new IndexHandler(bm);
     ih->openIndex("db","col",INT);
     printf("Built\n");
-    for(int i=0; i<10000; i++){
+    for(int i=0; i<600; i++){
         ih->insert((char*)&i, RID{i,i});
-        //printf("Inserted %d\n", i);
-        int index = 1;
-        if( i>=1 && ih->greaterCount((char*)&index) != i-1) break;
+        printf("Inserted %d\n", i);
+        //int index = 1;
+        //if( i>=1 && ih->greaterCount((char*)&index) != i-1) break;
     }
-    ih->debug();
     ih->closeIndex();
     ih->openIndex("db","col",INT);
-    ih->debug();
-    // ih->insert((char*)&index, RID{10,20});
-    // index = 1;
-    // printf("Is there any 1? %d\n", ih->count((char*)&index));
-    int index = 10;
+    IndexScan indexScan = ih->begin();
+    // char* nowdata = new char[MAX_RECORD_LEN];
+    // for(;indexScan.available(); indexScan.next())
+    // {
+    //     indexScan.getKey(nowdata);
+    //     cout << *((int*)nowdata) << " ";
+    // }
+    // cout << endl;
+    // delete[] nowdata;
+    int index = 1;
+    printf("Is there any 1? %d\n", ih->count((char*)&index));
+    index = 10;
     printf("Is there any 10? %d\n", ih->has((char*)&index));
     index = 1;
     ih->insert((char*)&index, RID{10,20});
