@@ -10,7 +10,7 @@ void IndexFileHandler::openFile(const char* fileName){
     if (fileID == -1){
         bm->createFile(fileName);
         fileID = bm->openFile(fileName);
-        IndexFileHeader* tempHeader = (IndexFileHeader*)bm->allocPage(fileID, 0, headerIndex);
+        /*IndexFileHeader* tempHeader = (IndexFileHeader*)*/bm->allocPage(fileID, 0, headerIndex);
         headerChanged = true;
         header->rootPageId = 1;
         header->pageCount = 1;

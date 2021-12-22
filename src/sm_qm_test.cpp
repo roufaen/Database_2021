@@ -127,13 +127,13 @@ int main(){
     selectorList.push_back("course_name");
     //std::vector<Condition> conditionList;
     conditionList.clear();
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 105, 0});
-    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 105, 0});
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "teacher", "",  "id", "", "", 85, 0});
+    conditionList.push_back(Condition{ConditionType::GREATER_EQUAL, INT, false, false, "course", "",  "id", "", "", 85, 0});
     //std::vector<std::vector<Data>> resData;
     resData.clear();
     qm->exeSelect(tableName, selectorList, conditionList, resData);
     for(auto i:resData){
-        cout << i[0].stringVal <<  " " << i[2].floatVal << endl;
+        cout << i[0].stringVal <<  " " << i[1].stringVal << endl;
     }
 
     conditionList.clear();
