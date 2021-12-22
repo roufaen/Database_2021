@@ -27,6 +27,9 @@ int main(){
     // cout << endl;
     // delete[] nowdata;
     int index = 1;
+    ih->insert((char*)&index, RID{1,1});
+    printf("Is there any 1? %d\n", ih->count((char*)&index));
+    ih->remove((char*)&index, RID{1,1});
     printf("Is there any 1? %d\n", ih->count((char*)&index));
     index = 10;
     printf("Is there any 10? %d\n", ih->has((char*)&index));

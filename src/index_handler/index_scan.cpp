@@ -10,20 +10,23 @@ int IndexScan::getKey(char* key){
 
 RID IndexScan::getValue(){
     if(currentNode->data[currentKeyPos].count == 1) return currentNode->data[currentKeyPos].value;
+    // std::cout << "Enter #0 " << currentValuePos << " " << currentNode->data[currentKeyPos].count << std::endl;
     if(currentValuePos == 0 || currentOverflowPage == nullptr) {
         currentCumulation = 0;
+        // std::cout << "Enter #1 " << currentNode->data[currentKeyPos].value.pageID <<  std::endl;
         int index; //index is useless
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentNode->data[currentKeyPos].value.pageID, index);
     }
-
     while(currentCumulation + currentOverflowPage->recs <= currentValuePos){
         currentCumulation += currentOverflowPage->recs;
+        // std::cout << "Enter #2 " << currentCumulation << " " << currentOverflowPage->recs << std::endl;
         int index;//index is useless
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPage->nextPage, index);
     }
 
-    while(currentCumulation + currentOverflowPage->recs > currentValuePos){
+    while(currentCumulation > currentValuePos){
         currentCumulation -= currentOverflowPage->recs;
+        // std::cout << "Enter #3 " << currentCumulation << " " << currentOverflowPage->recs << std::endl;
         int index;//index is useless
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPage->prevPage, index);
     }

@@ -41,11 +41,12 @@ IndexFileHandler::~IndexFileHandler(){
 void IndexFileHandler::access(int index){
     bm->access(index);
 }
-char* IndexFileHandler::newPage(int &index){
+char* IndexFileHandler::newPage(int &index, bool isOvrflowPage){
     // std::cout << "Apply for a new page" << std::endl;
     header->pageCount++;
     char* res = bm->getPage(fileID, header->pageCount, index);
-    ((BPlusNode*)res)->pageId = header->pageCount;
+    if(isOvrflowPage)  ((BPlusOverflowPage*)res)->pageId = header->pageCount;
+    else ((BPlusNode*)res)->pageId = header->pageCount;
     markPageDirty(index);
     markHeaderPageDirty(); 
     return res;

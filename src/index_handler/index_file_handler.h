@@ -17,7 +17,7 @@ public:
 
     void openFile(const char* fileName);
     void access(int index);
-    char* newPage(int &index);
+    char* newPage(int &index, bool isOvrlowpage = false);
     char* getPage(int pageID, int &index);
     void markHeaderPageDirty();
     void markPageDirty(int index);

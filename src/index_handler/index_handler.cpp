@@ -57,7 +57,7 @@ void IndexHandler::removeIndex(std::string _tableName, std::string _colName){
 void IndexHandler::insert(key_ptr key, RID rid){
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
-    std::cout << "root is " << treeFile->header->rootPageId << std::endl;
+    //std::cout << "root is " << treeFile->header->rootPageId << std::endl;
     if(root->recs == maxIndexPerPage){
         if(root->nodeType == ix::NodeType::LEAF){
             treeFile->markPageDirty(rootIndex);
@@ -194,30 +194,36 @@ void IndexHandler::remove(key_ptr key, RID rid){
         cerr << "No such key to remove\n";
         return;
     }
+    // std::cout << "Remove here step #0" << std::endl;
     vector<RID> rids = getRIDs(key);
     bool flag = false;
-    for(unsigned int i=0; i<rids.size(); i++)
+    for(unsigned int i=0; i<rids.size(); i++){
+        // std::cout << rids[i].pageID << " " <<  rids[i].slotID << std::endl;
         if(rids[i].pageID == rid.pageID && rids[i].slotID == rid.slotID) {
             flag = true;
             break;
         }
+    }
     if(!flag) {
         cerr << "No such resord to remove\n";
         return;
     }
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
+    // std::cout << "Remove here step #1" << std::endl;
     if((root->nodeType == ix::NodeType::INTERNAL) && (root->recs == 2)) {
         int index;
         BPlusNode* c0 = (BPlusNode*) treeFile->getPage(root->data[0].value.pageID, index);
         BPlusNode* c1 = (BPlusNode*) treeFile->getPage(root->data[1].value.pageID, index);
         if((c0->recs == c1->recs) && (c0->recs == (maxIndexPerPage >> 1))){
+            // std::cout << "Remove here step #2" << std::endl;
             mergePage(root, 0);
             treeFile->header->rootPageId = root->data[0].value.pageID;
         }
     }
-    deleteFromLegalPage(key, rid, treeFile->header->rootPageId);
     treeFile->markPageDirty(rootIndex);
+    // std::cout << "Remove here step #3" << std::endl;
+    deleteFromLegalPage(key, rid, treeFile->header->rootPageId);
     treeFile->header->sum--;
     treeFile->markHeaderPageDirty();
 }
@@ -226,7 +232,7 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     vector<RID> ret;
     ret.clear();
     if(totalCount() == 0) return ret;
-
+    
     IndexScan lb = lowerBound(key);
     IndexScan hb = upperBound(key);
     
@@ -370,7 +376,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
     int prCount = fa->data[index].count;
     if(prCount == 1){
         int newIndex;
-        BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex);
+        BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex,true);
         newOP->nodeType = ix::NodeType::OVRFLOW;
         newOP->nextPage = 0;
         newOP->prevPage = 0;
@@ -379,6 +385,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
         newOP->data[0] = fa->data[index].value;
         newOP->data[1] = rid;
         fa->data[index].value = RID{newOP->pageId, 0};
+        // std::cout << "page id is" << newOP->pageId << std::endl;
         fa->data[index].count = 2;
         treeFile->markPageDirty(newIndex);
     } else {
@@ -409,6 +416,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
 
 void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
     int index;
+    // std::cout << pageID << std::endl;
     BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, index);
     if(node->nodeType == ix::NodeType::LEAF){
         int i = 0;
@@ -417,6 +425,7 @@ void IndexHandler::deleteFromLegalPage(key_ptr key, RID rid, int pageID){
             if(compare(type, key, nowdata) < 0) break;
         }
         i--;
+        // std::cout << "Delete from i "<< node->data[i].count << std::endl;
         if(node->data[i].count > 1){
             deleteFromOverflowPage(key, rid, node, i);
         } else {
@@ -543,6 +552,7 @@ void IndexHandler::borrowFromForward(BPlusNode* node, int index){
 
 void IndexHandler::deleteFromOverflowPage(key_ptr key, RID rid, BPlusNode *fa, int index){
     int pageIndex;
+    // std::cout << "delete from overflow page" << fa->data[index].value.pageID << std::endl;
     BPlusOverflowPage* op = (BPlusOverflowPage*)treeFile->getPage(fa->data[index].value.pageID,pageIndex);
     int pos = -1;
     while(pos == -1){
