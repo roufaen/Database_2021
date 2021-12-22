@@ -57,7 +57,7 @@ void IndexHandler::removeIndex(std::string _tableName, std::string _colName){
 void IndexHandler::insert(key_ptr key, RID rid){
     int rootIndex;
     BPlusNode* root = (BPlusNode*)treeFile->getPage(treeFile->header->rootPageId, rootIndex);
-    std::cout << "root is " << treeFile->header->rootPageId << std::endl;
+    //std::cout << "root is " << treeFile->header->rootPageId << std::endl;
     if(root->recs == maxIndexPerPage){
         if(root->nodeType == ix::NodeType::LEAF){
             treeFile->markPageDirty(rootIndex);
