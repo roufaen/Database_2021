@@ -10,7 +10,7 @@ int main() {
     system("rm -rf *.dat");
     MyBitMap::initConst();
     char *dat = new char[2048];
-    memset(dat, 0, sizeof(*dat));
+    memset(dat, 0, sizeof(2048));
     BufManager *bufManager = new BufManager();
     RecordHandler *recordHandler = new RecordHandler(bufManager);
     recordHandler->createFile("file.dat");

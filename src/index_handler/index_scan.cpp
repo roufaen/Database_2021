@@ -1,7 +1,7 @@
 #include "index_handler.h"
 int IndexScan::getKey(char* key){
     RID temp = currentNode->data[currentKeyPos].keyPos;
-    if (!tree->keyFile->getRecord(temp, key)) {
+    if (tree->keyFile->getRecord(temp, key) == -1) {
         std::cerr << "Did not get the key\n";
         return -1;
     };

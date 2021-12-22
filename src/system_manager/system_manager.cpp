@@ -128,7 +128,7 @@ int SystemManager::createTable(string tableName, vector <TableHeader> headerList
         if (headerList[i].isForeign == true) {
             Table *foreignTable = getTable(headerList[i].foreignTableName);
             vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
-            for (int j = 0; j < (int)foreignHeaderList.size(); i++) {
+            for (int j = 0; j < (int)foreignHeaderList.size(); j++) {
                 if (headerList[i].foreignHeaderName == foreignHeaderList[j].headerName) {
                     foreignHeaderList[j].refCount++;
                 }
@@ -582,7 +582,7 @@ bool SystemManager::headerListLegal(vector <TableHeader> headerList) {
             for (int j = 0; j < (int)foreignHeaderList.size(); j++) {
                 if (headerList[i].foreignHeaderName == foreignHeaderList[j].headerName) {
                     // 检查外键信息是否正确
-                    if (foreignHeaderList[i].isPrimary == false || headerList[i].varType != foreignHeaderList[j].varType || headerList[i].len != foreignHeaderList[j].len) {
+                    if (foreignHeaderList[j].isPrimary == false || headerList[i].varType != foreignHeaderList[j].varType || headerList[i].len != foreignHeaderList[j].len) {
                         return false;
                     }
                     findForeignHeader = 1;
@@ -689,7 +689,7 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
             vector <Data> foreignDataList = foreignTable->exeSelect(rids[0]);
             vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
             for (int j = 0; j < (int)foreignDataList.size(); j++) {
-                if (foreignHeaderList[j].headerName == headerList[j].foreignHeaderName) {
+                if (foreignHeaderList[j].headerName == headerList[i].foreignHeaderName) {
                     foreignDataList[j].refCount += delta;
                 }
             }

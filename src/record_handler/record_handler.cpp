@@ -141,7 +141,10 @@ RID RecordHandler::insertRecord(const char *pData, int len) {
     if (this->fileID != -1) {
         if (availablePage.empty()) {
             this->header.pageNum++;
-            this->bufManager->allocPage(fileID, this->header.pageNum, idx);
+            BufType page = this->bufManager->allocPage(fileID, this->header.pageNum, idx);
+            this->bufManager->markDirty(idx);
+            memset(page, 0, PAGE_SIZE);
+            this->bufManager->writeBack(idx);
             this->availablePage.push(this->header.pageNum);
         }
         int pageID = this->availablePage.top();
