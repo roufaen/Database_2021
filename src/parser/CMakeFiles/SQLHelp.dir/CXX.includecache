@@ -7,10 +7,10 @@
 #IncludeRegexTransform: 
 
 /mnt/d/database2021/src/parser/MyParser.cpp
-Myparser.h
-/mnt/d/database2021/src/parser/Myparser.h
+MyParser.h
+/mnt/d/database2021/src/parser/MyParser.h
 
-/mnt/d/database2021/src/parser/Myparser.h
+/mnt/d/database2021/src/parser/MyParser.h
 string
 -
 antlr4-runtime.h
