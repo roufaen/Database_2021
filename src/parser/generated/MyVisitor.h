@@ -27,12 +27,14 @@ class MyVisitor: public SQLBaseVisitor {
     sm = _sm;
   }
   virtual antlrcpp::Any visitCreate_db(SQLParser::Create_dbContext *ctx) override {
+    if(!ctx->Identifier()) return defaultResult();
     if (sm->createDb(ctx->Identifier()->getText()) == 0) printf("Successfully create the DB\n");
     else printf("The creation fails.\n");
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitDrop_db(SQLParser::Drop_dbContext *ctx) override {
+    if(!ctx->Identifier()) return defaultResult();
     if (sm->dropDb(ctx->Identifier()->getText()) == 0) printf("Successfully drop the DB\n");
     else printf("The drop fails.\n");
     return defaultResult();
@@ -45,6 +47,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitUse_db(SQLParser::Use_dbContext *ctx) override {
+    if(!ctx->Identifier()) return defaultResult();
     if (sm->openDb(ctx->Identifier()->getText()) == 0) printf("Enter the db\n");
     else printf("Enter fails.\n");
     return defaultResult();
@@ -75,6 +78,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitCreate_table(SQLParser::Create_tableContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->field_list())) return defaultResult(); 
     std::string tableName = ctx->Identifier()->getText();
     std::vector<TableHeader> tableHeader;
     tableHeader.clear();
@@ -132,6 +136,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitDrop_table(SQLParser::Drop_tableContext *ctx) override {
+    if(!ctx->Identifier()) return defaultResult();
     sm->dropDb(ctx->Identifier()->getText());
     return defaultResult();
   }
@@ -141,6 +146,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitInsert_into_table(SQLParser::Insert_into_tableContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->value_lists())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     auto list = ctx->value_lists()->value_list();
     for(auto i:list){
@@ -157,6 +163,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitDelete_from_table(SQLParser::Delete_from_tableContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->where_and_clause())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     visitWhere_and_clause(ctx->where_and_clause());
     if(conditionList.size()) qm->exeDelete(tableName.c_str(), conditionList);
@@ -165,6 +172,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitUpdate_table(SQLParser::Update_tableContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->where_and_clause())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     std::vector<std::string> headerList;
     std::vector<Data> dataList;
@@ -185,6 +193,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
+    if(!(ctx->where_and_clause() && ctx->selectors() && ctx->identifiers())) return defaultResult();
     std::vector<std::vector<Data>> resData;
     resData.clear();
     std::vector<std::string> tableNameList;
@@ -210,6 +219,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     auto headerTable = ctx->identifiers()->Identifier();
     for(auto i:headerTable){
@@ -219,6 +229,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_drop_index(SQLParser::Alter_drop_indexContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     auto headerTable = ctx->identifiers()->Identifier();
     for(auto i:headerTable){

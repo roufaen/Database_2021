@@ -7,5 +7,13 @@ void parse(std::string sSQL, QueryManager* qm, RecordHandler* rh, IndexHandler* 
     SQLParser iParser(&sTokenStream);
     auto iTree = iParser.program();
     MyVisitor myVisitor(qm,rh,ih,sm); 
-    myVisitor.visit(iTree);;  
+    try
+    {
+        myVisitor.visit(iTree);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    
 }
