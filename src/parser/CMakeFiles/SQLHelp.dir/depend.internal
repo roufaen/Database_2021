@@ -3,7 +3,7 @@
 
 CMakeFiles/SQLHelp.dir/MyParser.o
  /mnt/d/database2021/src/parser/MyParser.cpp
- /mnt/d/database2021/src/parser/Myparser.h
+ /mnt/d/database2021/src/parser/MyParser.h
  generated/MyVisitor.h
  generated/SQLBaseVisitor.h
  generated/SQLLexer.h
