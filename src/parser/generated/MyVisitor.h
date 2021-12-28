@@ -86,8 +86,9 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<SQLParser::FieldContext *> fc = ctx->field_list()->field();
     TableHeader th;
     th.tableName = tableName;
-    for(auto i:fc){
-      
+    bool isCreated = false;
+    std::vector<std::string> PF_1;
+    for(auto i:fc){ 
       SQLParser::Normal_fieldContext* pointer = dynamic_cast<SQLParser::Normal_fieldContext*>(i);
       if(pointer != nullptr) {
         th.headerName = pointer->Identifier()->getText();
@@ -97,43 +98,51 @@ class MyVisitor: public SQLBaseVisitor {
         th.varType = getVarType(pointer->type_(), th.len);
         th.hasIndex = false;
         th.permitNull = (pointer->Null() == nullptr);
+        //th.defaultValue
         tableHeader.push_back(th);
-        //TO BE FIXED: Default value?
       } else { 
+        if(!isCreated) {
+          if(sm->createTable(tableName, tableHeader)) {
+            printf("Fail to create the table\n");
+            return defaultResult();
+          }
+          isCreated = true;
+        }
         SQLParser::Primary_key_fieldContext* pointer = dynamic_cast<SQLParser::Primary_key_fieldContext*>(i);
         if(pointer != nullptr) {
+          PF_1.clear();
           auto list = pointer->identifiers()->Identifier();
           for(auto id:list){
-            for(auto member:tableHeader)
-              if(member.headerName == id->getText()) {
-                member.isPrimary = true;
-                member.hasIndex = true;
-                member.isUnique = true;
-                break;
-              }
+              PF_1.push_back(id->getText());
           }
+          if(sm->createPrimary(tableName, PF_1)) {
+            sm->dropTable(tableName);
+            printf("Fail to create the table\n");
+            return defaultResult();
+          };
         } else {
           SQLParser::Foreign_key_fieldContext* pointer = dynamic_cast<SQLParser::Foreign_key_fieldContext*>(i);
           if(pointer != nullptr) {
-              //TODO: check the table & truly link
-              for(auto member:tableHeader)
-              if(member.headerName == pointer->Identifier(0)->getText()) {
-                member.isForeign = true;
-                member.foreignTableName = pointer->Identifier(1)->getText();
-                member.foreignHeaderName = pointer->Identifier(2)->getText();
-                break;
+              tableHeader.clear();
+              std::string foreignTable = pointer->Identifier(1)->getText();
+              th.headerName = pointer->Identifier(0)->getText();
+              th.isForeign = true;
+              th.foreignHeaderName = pointer->Identifier(1)->getText();
+              tableHeader.push_back(th);
+              if (sm->createForeign(tableName,foreignTable, tableHeader)) {
+                sm->dropTable(tableName);
+                printf("Fail to create the table\n");
+                return defaultResult();
               }
-
           } else{
              cerr << "UNKNOWN TYPE IN PARSING CREATE TABLE\n";
+             sm->dropTable(tableName);
              return defaultResult();
           }
         }
       } 
     }
     printf("Begin to create the table\n");
-    if(sm->createTable(tableName, tableHeader) == 0) printf("Successfully create the table\n");
-    else printf("Fail to create the table\n");
     return defaultResult();
   }
 
@@ -219,41 +228,111 @@ class MyVisitor: public SQLBaseVisitor {
   virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
     if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
-    auto headerTable = ctx->identifiers()->Identifier();
-    for(auto i:headerTable){
-      //sm->createIndex(tableName, i->getText());
-    }
+    auto& headerTable = ctx->identifiers()->Identifier();
+    // 以下部分用于支持联合索引（？）
+    // for(auto i:headerTable){
+      // sm->createIndex(tableName, i->getText());
+    // }
+    sm->createIndex(tableName, headerTable[0]->getText());
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_drop_index(SQLParser::Alter_drop_indexContext *ctx) override {
     if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
-    auto headerTable = ctx->identifiers()->Identifier();
-    for(auto i:headerTable){
-      //sm->dropIndex(tableName, i->getText());
-    }
+    auto& headerTable = ctx->identifiers()->Identifier();
+    // 以下部分用于支持联合索引（？）
+    // for(auto i:headerTable){
+      // sm->createIndex(tableName, i->getText());
+    // }
+    sm->dropIndex(tableName, headerTable[0]->getText());
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
-    return visitChildren(ctx);
+    auto& id = ctx->Identifier();
+    if(id.size() == 0) {
+      return defaultResult();
+    }
+    std::vector<std::string> identifiers;
+    identifiers.clear();
+    for(int i=1; i<id.size(); i++)
+      identifiers.push_back(id[i]->getText());
+    sm->dropPrimary(id[0]->getText(), identifiers);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_foreign_key(SQLParser::Alter_table_drop_foreign_keyContext *ctx) override {
-    return visitChildren(ctx);
+    //Here is the bug located, only initial foreign col name is supported, no foreign name supported.
+    auto& id = ctx->Identifier();
+    if(id.size() != 2) {
+      return defaultResult();
+    }
+    std::vector<std::string> listName;
+    listName.clear();
+    listName.push_back(id[1]->getText());
+    sm->dropForeign(id[0]->getText(),listName);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_add_pk(SQLParser::Alter_table_add_pkContext *ctx) override {
-    return visitChildren(ctx);
+    auto& identi = ctx->Identifier();
+    if(identi.size() != 2) {
+      return defaultResult();
+    }
+    string tableName = identi[0]->getText(); 
+    string keyName = identi[1]->getText();
+    auto& identifiers = ctx->identifiers()->Identifier();
+    std::vector<std::string> headerName;
+    headerName.clear();
+    for(auto i:identifiers){
+      headerName.push_back(i->getText());
+    }
+    sm->createPrimary(tableName, headerName);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_add_foreign_key(SQLParser::Alter_table_add_foreign_keyContext *ctx) override {
-    return visitChildren(ctx);
+    auto& identi = ctx->Identifier();
+    auto& selfid = ctx->identifiers(0)->Identifier();
+    auto& othid = ctx->identifiers(1)->Identifier();
+    if(identi.size() != 3 &&  ctx->identifiers().size() != 2) {
+      return defaultResult();
+    }
+    if(selfid.size() != othid.size()) {
+      return defaultResult();
+    }
+    string tableName = identi[0]->getText(); 
+    string keyName = identi[1]->getText();
+    string foreignTable = identi[2]->getText();
+
+    TableHeader th;
+    th.tableName = tableName;
+    std::vector<TableHeader> headerName;
+    headerName.clear();
+    for(int i = 0; i < selfid.size(); i++){
+      th.foreignHeaderName = othid[i]->getText();
+      th.foreignTableName = foreignTable;
+      th.headerName = selfid[i]->getText();
+      th.isForeign = true;
+      headerName.push_back(th);
+    }
+    sm->createForeign(tableName, foreignTable, headerName);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_table_add_unique(SQLParser::Alter_table_add_uniqueContext *ctx) override {
-    return visitChildren(ctx);
+    if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
+    // Here locates the line to bear multip unique keys
+    // std::vector<string> listName;
+    // listName.clear();
+    // auto& list = ctx->identifiers()->Identifier();
+    // for(auto i:list){
+    //   listName.push_back(i->getText());
+    // }
+    // sm->createUnique(ctx->Identifier()->getText(), listName);
+    sm->createUnique(ctx->Identifier()->getText(), ctx->identifiers()->Identifier(0)->getText());
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override{
