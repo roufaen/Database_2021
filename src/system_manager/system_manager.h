@@ -43,7 +43,7 @@ public:
     // 列头为 header ，数据为 data ，对引用的外键，其被引用次数 +1 （新增）或 -1 （删除）
     void foreignKeyProcess(vector <TableHeader> headerList, vector <Data> dataList, int delta);
     // 输入 table 名、列名、数据，返回 index 中 key 的计数
-    int countKey(string tableName, string headerName, VarType type, int intVal, double floatVal, string stringVal);
+    //int countKey(string tableName, string headerName, VarType type, int intVal, double floatVal, string stringVal);
 
 private:
     bool headerListLegal(vector <TableHeader> headerList);

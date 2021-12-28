@@ -28,6 +28,7 @@ public:
     bool conditionJudge(vector <TableHeader> headerList, vector <Data> dataList, vector <Condition> conditionList);
 
 private:
+    bool foreignKeyExistJudge(TableHeader header, Data data);
     IndexHandler *indexHandler;
     SystemManager *systemManager;
     BufManager *bufManager;

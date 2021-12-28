@@ -2,6 +2,7 @@
 #include "system_manager/system_manager.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <iostream>
 using namespace std;
 
 unsigned char MyBitMap::ha[] = {0};
@@ -21,10 +22,13 @@ int main(){
     assert(sm->openDb("courses") == 0);
     vector<TableHeader> tableHeader;
     tableHeader.clear();
-    tableHeader.push_back(TableHeader{"teacher", "id", "", "", INT, 4, 0, true, false, true, false, true});
-    tableHeader.push_back(TableHeader{"teacher", "name", "", "", VARCHAR, 10, 0, false, false, false, false, false});
-    tableHeader.push_back(TableHeader{"teacher", "score", "", "", FLOAT, 4, 0, false, false, false, false, false});
+    tableHeader.push_back(TableHeader{"teacher", "id", "", "", INT, 4, 0, 0, true, false, false, false, false});
+    tableHeader.push_back(TableHeader{"teacher", "name", "", "", VARCHAR, 10, 0, 0, false, false, false, false, false});
+    tableHeader.push_back(TableHeader{"teacher", "score", "", "", FLOAT, 4, 0, 0, false, false, false, false, false});
     sm->createTable("teacher", tableHeader);
+    vector<string> nameHeader;
+    nameHeader.push_back("id");
+    sm->createPrimary("teacher", nameHeader);
     for(int i=0;i<10;i++){
         vector<Data> data;
         data.clear();
@@ -84,10 +88,16 @@ int main(){
     assert(qm->exeInsert("teacher", data) == -1);
 
     tableHeader.clear();
-    tableHeader.push_back(TableHeader{"course", "id", "", "", INT, 4, 0, true, false, true, false, true});
-    tableHeader.push_back(TableHeader{"course", "course_name", "", "", VARCHAR, 10, 0, false, false, false, false, false});
-    tableHeader.push_back(TableHeader{"course", "teacher", "teacher", "id", INT, 4, 0, false, true, false, false, false});
+    tableHeader.push_back(TableHeader{"course", "id", "", "", INT, 4, 0, 0, false, false, false, false, true});
+    tableHeader.push_back(TableHeader{"course", "course_name", "", "", VARCHAR, 10, 0, 0, false, false, false, false, false});
+    tableHeader.push_back(TableHeader{"course", "teacher", "teacher", "id", INT, 4, 0, 0, false, false, false, false, false});
     assert(sm->createTable("course", tableHeader) == 0);
+    nameHeader.clear();
+    nameHeader.push_back("id");
+    tableHeader.clear();
+    tableHeader.push_back(TableHeader{"", "teacher", "", "id", INT, 0, 0, 0, false, false, false, false, false});
+    sm->createPrimary("course", nameHeader);
+    sm->createForeign("course", "teacher", tableHeader);
     
     for(int i=0;i<10;i++){
         vector<Data> data;
