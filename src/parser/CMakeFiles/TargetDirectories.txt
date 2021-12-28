@@ -1,6 +1,0 @@
-/mnt/d/database2021/src/parser/CMakeFiles/rebuild_cache.dir
-/mnt/d/database2021/src/parser/CMakeFiles/edit_cache.dir
-/mnt/d/database2021/src/parser/CMakeFiles/SQLHelp.dir
-/mnt/d/database2021/src/parser/CMakeFiles/antlr4-cpp-runtime.dir
-/mnt/d/database2021/src/parser/generated/CMakeFiles/rebuild_cache.dir
-/mnt/d/database2021/src/parser/generated/CMakeFiles/edit_cache.dir

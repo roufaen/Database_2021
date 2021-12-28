@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/SQLHelp.dir/generated/SQLBaseVisitor.o CMakeFiles/SQLHelp.dir/generated/SQLLexer.o CMakeFiles/SQLHelp.dir/generated/SQLParser.o CMakeFiles/SQLHelp.dir/generated/SQLVisitor.o CMakeFiles/SQLHelp.dir/generated/MyVisitor.o CMakeFiles/SQLHelp.dir/MyParser.o  -o SQLHelp  libantlr4-cpp-runtime.a 
