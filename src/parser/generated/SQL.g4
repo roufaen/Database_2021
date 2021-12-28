@@ -16,6 +16,7 @@ Null: 'NULL';
 
 Identifier: [a-zA-Z_] [a-zA-Z_0-9]*;
 Integer: [0-9]+;
+Date: [1-9] [0-9] [0-9] [0-9] '-' [0-1] [0-9] '-' [0-3] [0-9];
 String:  '\'' (~'\'')* '\'';
 Float: ('-')? [0-9]+ '.' [0-9]*;
 Whitespace: [ \t\n\r]+ -> skip;
@@ -86,6 +87,7 @@ type_
     : 'INT'
     | 'VARCHAR' '(' Integer ')'
     | 'FLOAT'
+    | 'DATE'
     ;
 
 value_lists
@@ -100,6 +102,7 @@ value
     : Integer
     | String
     | Float
+    | Date
     | Null
     ;
 

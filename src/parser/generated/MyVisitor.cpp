@@ -11,6 +11,8 @@ VarType getVarType(SQLParser::Type_Context* tc, int& len){
             return VARCHAR;
         case 3: len=4;
             return FLOAT;
+        case 4: len=4;
+            return DATE;
     }
     len=0;
     return VARCHAR;
@@ -34,30 +36,36 @@ Type getValue(const string& str){
     return num;  
 }
 
-void getFromValue(Data& dt, SQLParser::ValueContext* data){
-    try
+bool getFromValue(Data& dt, SQLParser::ValueContext* data){
+    if(data->Float())
     { 
         dt.floatVal = getValue<float>(data->Float()->getText());
         dt.varType = FLOAT;
+        return true;
     }
-    catch(const std::exception& e) {}
-    try
+    if(data->Integer())
     { 
         dt.intVal = getValue<int>(data->Integer()->getText());
         dt.varType = INT;
+        return true;
     }
-    catch(const std::exception& e) {}
-    try
+    if(data->Date())
+    {
+        dt.varType = DATE;
+        return isDate(data->Date()->getText(), dt.intVal);
+    }
+    if(data->String())
     { 
         dt.stringVal = data->String()->getText();
         dt.varType = VARCHAR;
+        return true;
     }
-    catch(const std::exception& e) {}
-    try
+    if(data->Null())
     { 
-        dt.isNull = ( data->Null() != nullptr );
+        dt.isNull = true;
+        return true;
     }
-    catch(const std::exception& e) {}
+    return false;
 }
 
 inline int max(int a, int b) {return a>b?a:b; }
@@ -88,6 +96,8 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     for(auto dt:data){
         int index = 0;
         for(auto d:dt){
+            if(d.isNull) len[index] = max(len[index], 4);
+            else
             switch (d.varType)
             {
             case INT:
@@ -95,7 +105,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 break;
             case FLOAT:
                 double ftval = (d.floatVal < 0) ? -d.floatVal : d.floatVal;
-                len[index] = max(len[index], max( ceil(log10(ftval)) + (d.floatVal < 0) , 7));
+                len[index] = max(len[index], (ftval>999999?getNumLen(ftval):7)+(d.floatVal<0));
                 break;
             case VARCHAR:
             case CHAR:
@@ -139,18 +149,20 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     for(auto dt:data){
         int index = 0;
         for(auto d:dt){
+            if(d.isNull) std::cout << setw(len[index]) << setiosflags(ios::left) << "NULL";
+            else
             switch (d.varType)
             {
             case INT:
             case DATE:
-                std::cout << setw(len[index]) << d.intVal;
+                std::cout << setw(len[index]) << setiosflags(ios::left) << d.intVal;
                 break;
             case FLOAT:
-                std::cout << setw(len[index]) << d.floatVal;
+                std::cout << setw(len[index]) << setiosflags(ios::left) << d.floatVal;
                 break;
             case VARCHAR:
             case CHAR:
-                std::cout << setw(len[index]) << d.stringVal;
+                std::cout << setw(len[index]) << setiosflags(ios::left) << d.stringVal;
                 break;
             default:
                 std::cerr << "ERROR TYPE IN PRINTING" << std::endl;
@@ -169,4 +181,37 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
        std::cout<<"+";
     }
     std::cout<<std::endl;
+}
+
+bool isDate(string& dateStr, int& date){
+    int yr = getValue<int>(dateStr.substr(0, 4));
+    int mt = getValue<int>(dateStr.substr(5, 2));
+    int dt = getValue<int>(dateStr.substr(8, 2));
+    bool isLeap = (yr % 4 == 0) && ( (yr % 100 != 0) || ( yr % 400 == 0));
+    if(dt == 0) return false;
+    switch (mt)
+    {
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+        case 8:
+        case 10:
+        case 12:
+            if(dt>31) return false;
+            break;
+        case 4:
+        case 6:
+        case 9:
+        case 11:
+            if(dt>30) return false;
+            break;
+        case 2:
+            if(isLeap && dt>29) return false;
+            if(!isLeap && dt>28) return false;
+            break;
+        default:
+            return false;
+    }
+    return true;
 }
