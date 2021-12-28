@@ -4,6 +4,7 @@
 *.obj
 *.out
 *.exe
+*.a
 
 # data
 *.dat
