@@ -250,10 +250,10 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
-    auto& id = ctx->Identifier();
-    if(id.size() == 0) {
+    if(ctx->Identifier()) {
       return defaultResult();
     }
+    auto& id = ctx->identifiers()->Identifier();
     std::vector<std::string> identifiers;
     identifiers.clear();
     for(int i=1; i<id.size(); i++)
@@ -264,14 +264,15 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitAlter_table_drop_foreign_key(SQLParser::Alter_table_drop_foreign_keyContext *ctx) override {
     //Here is the bug located, only initial foreign col name is supported, no foreign name supported.
-    auto& id = ctx->Identifier();
-    if(id.size() != 2) {
+    if(ctx->Identifier()) {
       return defaultResult();
     }
+    std::string tableName = ctx->Identifier()->getText();
+    auto& id = ctx->identifiers()->Identifier();
     std::vector<std::string> listName;
     listName.clear();
     listName.push_back(id[1]->getText());
-    sm->dropForeign(id[0]->getText(),listName);
+    sm->dropForeign(tableName,listName);
     return defaultResult();
   }
 

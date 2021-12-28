@@ -1,10 +1,10 @@
 
-// Generated from SQL.g4 by ANTLR 4.9.3
+// Generated from ./SQL.g4 by ANTLR 4.9.3
 
 #pragma once
 
 
-#include "../third_party/runtime/src/antlr4-runtime.h"
+#include "antlr4-runtime.h"
 #include "SQLVisitor.h"
 
 

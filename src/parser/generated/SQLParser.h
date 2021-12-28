@@ -1,10 +1,10 @@
 
-// Generated from SQL.g4 by ANTLR 4.9.3
+// Generated from ./SQL.g4 by ANTLR 4.9.3
 
 #pragma once
 
 
-#include "../third_party/runtime/src/antlr4-runtime.h"
+#include "antlr4-runtime.h"
 
 
 
@@ -320,8 +320,8 @@ public:
   public:
     Alter_table_drop_pkContext(Alter_statementContext *ctx);
 
-    std::vector<antlr4::tree::TerminalNode *> Identifier();
-    antlr4::tree::TerminalNode* Identifier(size_t i);
+    antlr4::tree::TerminalNode *Identifier();
+    IdentifiersContext *identifiers();
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
@@ -372,8 +372,8 @@ public:
   public:
     Alter_table_drop_foreign_keyContext(Alter_statementContext *ctx);
 
-    std::vector<antlr4::tree::TerminalNode *> Identifier();
-    antlr4::tree::TerminalNode* Identifier(size_t i);
+    antlr4::tree::TerminalNode *Identifier();
+    IdentifiersContext *identifiers();
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
