@@ -156,6 +156,8 @@ vector <TableHeader> Table::getHeaderList() {
         ptr += sizeof(int);
         header.refCount = *((int*)ptr);
         ptr += sizeof(int);
+        header.id = *((int*)ptr);
+        ptr += sizeof(int);
         header.isPrimary = *((bool*)ptr);
         ptr += sizeof(bool);
         header.isForeign = *((bool*)ptr);
@@ -201,6 +203,8 @@ int Table::writeHeaderList(vector <TableHeader> headerList) {
         memcpy(ptr, &headerList[i].len, sizeof(int));
         ptr += sizeof(int);
         memcpy(ptr, &headerList[i].refCount, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &headerList[i].id, sizeof(int));
         ptr += sizeof(int);
         memcpy(ptr, &headerList[i].isPrimary, sizeof(bool));
         ptr += sizeof(bool);
