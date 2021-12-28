@@ -5,6 +5,7 @@
 
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
+void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data);
 
 template <class Type>  
 Type getValue(const string& str);
@@ -130,6 +131,7 @@ class MyVisitor: public SQLBaseVisitor {
         }
       } 
     }
+    printf("Begin to create the table\n");
     if(sm->createTable(tableName, tableHeader) == 0) printf("Successfully create the table\n");
     else printf("Fail to create the table\n");
     return defaultResult();
@@ -209,11 +211,7 @@ class MyVisitor: public SQLBaseVisitor {
       selectorList.push_back(i->column()->Identifier(1)->getText());
     }
     if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
-      for(auto i:resData){
-        for(auto j:i){
-
-        }
-      }
+      print(tableNameList, selectorList, resData);
     } else printf("Fail to select the data\n");
     return defaultResult();
   }
