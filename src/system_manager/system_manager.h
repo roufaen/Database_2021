@@ -8,6 +8,7 @@
 # include <vector>
 # include <string>
 # include <map>
+# include <iostream>
 
 using namespace std;
 
@@ -28,8 +29,10 @@ public:
     int dropIndex(string tableName, string headerName);
     int createColumn(string tableName, TableHeader header, Data defaultData);
     int dropColumn(string tableName, string headerName);
-    int createPrimary(string tableName, string headerName);
-    int dropPrimary(string tableName, string headerName);
+    int createPrimary(string tableName, vector <string> headerNameList);
+    int dropPrimary(string tableName, vector <string> headerNameList);
+    int createForeign(string tableName, string foreignTableName, vector <TableHeader> updateHeaderList);
+    int dropForeign(string tableName, vector <string> headerNameList);
     int createUnique(string tableName, string headerName);
     int dropUnique(string tableName, string headerName);
 
@@ -44,6 +47,7 @@ public:
 
 private:
     bool headerListLegal(vector <TableHeader> headerList);
+    bool columnUnique(string tableName, string headerName);
     IndexHandler *indexHandler;
     BufManager *bufManager;
     NameHandler *dbNameHandler, *tableNameHandler;

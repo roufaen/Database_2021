@@ -87,6 +87,11 @@ string SystemManager::getDbName() {
 }
 
 int SystemManager::createTable(string tableName, vector <TableHeader> headerList) {
+    // 检查 table 是否存在，检查数据库是否存在
+    if (hasTable(tableName) || this->dbName == "") {
+        return -1;
+    }
+
     for (int i = 0; i < (int)headerList.size(); i++) {
         headerList[i].tableName = tableName;
         headerList[i].refCount = 0;
@@ -142,7 +147,7 @@ int SystemManager::createTable(string tableName, vector <TableHeader> headerList
 
 int SystemManager::dropTable(string tableName) {
     // 检查 table 是否存在
-    if (!this->tableNameHandler->hasElement(tableName)) {
+    if (!hasTable(tableName)) {
         return -1;
     }
     // 检查是否有键被引用
@@ -211,7 +216,7 @@ Table* SystemManager::getTable(string tableName) {
 
 int SystemManager::createIndex(string tableName, string headerName) {
     // 检查 table 是否存在
-    if (!hasTable(tableName)) {
+    if (!hasTable(tableName) || this->dbName == "") {
         return -1;
     }
     Table *table = getTable(tableName);
@@ -429,94 +434,244 @@ int SystemManager::dropColumn(string tableName, string headerName) {
     return 0;
 }
 
-int SystemManager::createPrimary(string tableName, string headerName) {
+int SystemManager::createPrimary(string tableName, vector <string> headerNameList) {
     // 检查 table 是否存在
     if (!hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
         return -1;
     }
 
     Table *table = getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
-    int idxPos = -1, hasPrimary = 0;
+    // 检查是否已经有主键
     for (int i = 0; i < (int)headerList.size(); i++) {
-        if (headerName == headerList[i].headerName && idxPos == -1) {
-            idxPos = i;
-        }
         if (headerList[i].isPrimary == true) {
-            hasPrimary = 1;
+            cerr << "Table " << tableName << " has primary key already. Operation failed." << endl;
+            return -1;
         }
     }
-    // 不能有多个主键
-    if (idxPos == -1 || hasPrimary == 1) {
-        return -1;
+
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        int find = 0;
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                // 检查是否满足 unique 要求
+                if (columnUnique(tableName, headerList[j].headerName) == false) {
+                    cerr << "Column " << headerList[j].headerName << " is not unique. Operation failed." << endl;
+                    return -1;
+                }
+                find = 1;
+                break;
+            }
+        }
+        // 检查列是否存在
+        if (find == 0) {
+            cerr << "Column " << headerNameList[i] << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
     }
-    if (headerList[idxPos].isUnique == false && createUnique(tableName, headerName) == -1) {
-        return -1;
+
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                headerList[j].isPrimary = true;
+                headerList[j].id = i;
+            }
+        }
     }
-    headerList[idxPos].isPrimary = true;
     table->writeHeaderList(headerList);
 
     return 0;
 }
 
-int SystemManager::dropPrimary(string tableName, string headerName) {
+int SystemManager::dropPrimary(string tableName, vector <string> headerNameList) {
     // 检查 table 是否存在
     if (!hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
         return -1;
     }
 
     Table *table = getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
-    int idxPos = -1;
+
+    int counter = 0;
     for (int i = 0; i < (int)headerList.size(); i++) {
-        if (headerName == headerList[i].headerName) {
-            idxPos = i;
+        if (headerList[i].isPrimary == true) {
+            counter++;
         }
     }
-    if (idxPos == -1 || headerList[idxPos].refCount > 0) {
+    if (headerNameList.size() != counter) {
+        cerr << "Primary key doesn't exist. Operation failed." << endl;
         return -1;
     }
-    headerList[idxPos].isPrimary = false;
+
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        int find = 0;
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                // 检查是否为主键
+                if (headerList[j].isPrimary == false) {
+                    cerr << "Primary key doesn't exist. Operation failed." << endl;
+                    return -1;
+                }
+                // 检查是否被引用
+                if (headerList[j].refCount > 0) {
+                    cerr << "Primary key is referenced. Operation failed." << endl;
+                    return -1;
+                }
+                find = 1;
+                break;
+            }
+        }
+        // 检查列是否存在
+        if (find == 0) {
+            cerr << "Primary key doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+    }
+
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                headerList[j].isPrimary = false;
+                headerList[j].id = -1;
+            }
+        }
+    }
     table->writeHeaderList(headerList);
 
     return 0;
+}
+
+int SystemManager::createForeign(string tableName, string foreignTableName, vector <TableHeader> updateHeaderList) {
+    // 检查 table 是否存在
+    if (!hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    } else if (!hasTable(foreignTableName)) {
+        cerr << "Table " << foreignTableName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    // 检查是否引用自己
+    } else if (tableName == foreignTableName) {
+        cerr << "Table " << tableName << " can't refer to itself." << endl;
+        return -1;
+    }
+
+    Table *table = getTable(tableName);
+    Table *foreignTable = getTable(foreignTable);
+    vector <TableHeader> headerList = table->getHeaderList();
+    vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
+    vector <int> updatePos;
+    int counter = 0;
+
+    for (int i = 0; i < (int)updateHeaderList.size(); i++) {
+        int find = 0;
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (updateHeaderList[i].headerName == headerList[j].headerName) {
+                // 不能同时为主键和外键
+                if (headerList[j].isPrimary == true) {
+                    cerr << "Column " << updateHeaderList[i].headerName << " is part of primary key. Operation failed." << endl;
+                    return -1;
+                }
+                updatePos.push_back(j);
+                find = 1;
+                break;
+            }
+        }
+        // 检查列是否存在
+        if (find == 0) {
+            cerr << "Column " << updateHeaderList[i].headerName << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+        find = 0;
+        for (int j = 0; j < (int)foreignHeaderList.size(); j++) {
+            if (updateHeaderList[i].foreignHeaderName == foreignHeaderList[j].headerName && foreignHeaderList[j].isPrimary == true) {
+                find = 1;
+                break;
+            }
+        }
+        // 检查引用列是否存在
+        if (find == 0) {
+            cerr << "Column " << updateHeaderList[i].foreignHeaderName << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+    }
+
+    for (int i = 0; i < (int)foreignHeaderList.size(); i++) {
+        if (foreignHeaderList[i].isPrimary == true) {
+            counter++;
+        }
+    }
+    // 检查是否正确引用了主键
+    if (updateHeaderList.size() != counter) {
+        cerr << "Primary key doesn't exist. Operation failed." << endl;
+        return -1;
+    }
+
+    int maxNum = -1;
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].isForeign == true) {
+            maxNum = headerList[i].id > maxNum ? headerList[i].id : maxNum;
+        }
+    }
+
+    for (int i = 0; i < (int)updateHeaderList.size(); i++) {
+        headerList[updatePos[i]].isForeign = true;
+        headerList[updatePos[i]].foreignTableName = foreignTableName;
+        headerList[updatePos[i]].foreignHeaderName = updateHeaderList[i].foreignHeaderName;
+        headerList[updatePos[i]].id = maxNum + 1;
+    }
+
+    for (int i = 0; i < (int)foreignHeaderList.size(); i++) {
+        
+    }
+    // 修改外键信息
+    if (header.isForeign == true) {
+        Table *foreignTable = getTable(header.foreignTableName);
+        vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
+        for (int i = 0; i < (int)foreignHeaderList.size(); i++) {
+            if (header.foreignHeaderName == foreignHeaderList[i].headerName) {
+                foreignHeaderList[i].refCount++;
+            }
+        }
+        foreignTable->writeHeaderList(foreignHeaderList);
+    }
+}
+
+int SystemManager::dropForeign(string tableName, vector <string> headerNameList) {
+
 }
 
 int SystemManager::createUnique(string tableName, string headerName) {
     // 检查 table 是否存在
     if (!hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
         return -1;
     }
 
     Table *table = getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
-    vector <RID> ridList = table->getRecordList();
     int idxPos = -1;
     for (int i = 0; i < (int)headerList.size(); i++) {
         if (headerName == headerList[i].headerName) {
             idxPos = i;
-        }
-    }
-    if (idxPos == -1) {
-        return -1;
-    }
-    int hasIndex = headerList[idxPos].hasIndex;
-    if (hasIndex == 0) {
-        createIndex(tableName, headerName);
-    }
-
-    for (int i = 0; i < (int)ridList.size(); i++) {
-        vector <Data> dataList = table->exeSelect(ridList[i]);
-        VarType type = headerList[idxPos].varType == DATE ? INT : (headerList[idxPos].varType == CHAR ? VARCHAR : headerList[idxPos].varType);
-        if (dataList[idxPos].isNull == false) {
-            int count = countKey(tableName, headerName, type, dataList[idxPos].intVal, dataList[idxPos].floatVal, dataList[idxPos].stringVal);
-            if (count > 1) {
-                if (hasIndex == 0) {
-                    dropIndex(tableName, headerName);
-                }
+            // 检查是否已经 unique
+            if (headerList[i].isUnique == true) {
+                cerr << "Column " << headerName << " is already unique. Operation failed." << endl;
                 return -1;
             }
         }
+    }
+    // 检查列是否存在
+    if (idxPos == -1) {
+        cerr << "Column " << headerName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    }
+
+    // 检查元素是否有重复
+    if (!columnUnique(tableName, headerName)) {
+        cerr << "Column " << headerName << " has duplicate elements. Operation failed." << endl;
+        return -1;
     }
 
     headerList[idxPos].isUnique = true;
@@ -528,20 +683,26 @@ int SystemManager::createUnique(string tableName, string headerName) {
 int SystemManager::dropUnique(string tableName, string headerName) {
     // 检查 table 是否存在
     if (!hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
         return -1;
     }
 
     Table *table = getTable(tableName);
     vector <TableHeader> headerList = table->getHeaderList();
-    vector <RID> ridList = table->getRecordList();
     int idxPos = -1;
     for (int i = 0; i < (int)headerList.size(); i++) {
         if (headerName == headerList[i].headerName) {
             idxPos = i;
+            // 检查是否未 unique
+            if (headerList[i].isUnique == false) {
+                cerr << "Column " << headerName << " isn't unique yet. Operation failed." << endl;
+                return -1;
+            }
         }
     }
-    // 主键不能非 Unique
-    if (idxPos == -1 || headerList[idxPos].isPrimary == true) {
+    // 检查列是否存在
+    if (idxPos == -1) {
+        cerr << "Column " << headerName << " doesn't exist. Operation failed." << endl;
         return -1;
     }
 
@@ -591,6 +752,47 @@ bool SystemManager::headerListLegal(vector <TableHeader> headerList) {
             // 检查是否找到外键
             if (findForeignHeader == 0) {
                 return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool SystemManager::columnUnique(string tableName, string headerName) {
+    Table *table = getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
+    vector <RID> ridList = table->getRecordList();
+    map <int, int> mapInt;
+    map <double, int> mapFloat;
+    map <string, int> mapString;
+    int idxPos = -1;
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerName == headerList[i].headerName) {
+            idxPos = i;
+        }
+    }
+
+    // 用 map 判断是否有重复元素
+    for (int i = 0; i < (int)ridList.size(); i++) {
+        vector <Data> dataList = table->exeSelect(ridList[i]);
+        if (headerList[idxPos].varType == INT || headerList[idxPos].varType == DATE) {
+            if (mapInt.count(dataList[idxPos].intVal) != 0) {
+                return false;
+            } else {
+                mapInt[dataList[idxPos].intVal] = 1;
+            }
+        } else if (headerList[idxPos].varType == FLOAT) {
+            if (mapFloat.count(dataList[idxPos].floatVal) != 0) {
+                return false;
+            } else {
+                mapFloat[dataList[idxPos].floatVal] = 1;
+            }
+        } else if (headerList[idxPos].varType == CHAR || headerList[idxPos].varType == VARCHAR) {
+            if (mapString.count(dataList[idxPos].stringVal) != 0) {
+                return false;
+            } else {
+                mapString[dataList[idxPos].stringVal] = 1;
             }
         }
     }
