@@ -452,12 +452,14 @@ public:
   FieldContext* field();
 
   class  Type_Context : public antlr4::ParserRuleContext {
+  private:
+    int altNumber;
   public:
     Type_Context(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *Integer();
-
-
+    virtual void setAltNumber(size_t _altNumber) override { altNumber = _altNumber; }
+    virtual size_t getAltNumber() const override {return altNumber;}
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
   };
