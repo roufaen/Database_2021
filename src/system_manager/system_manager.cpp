@@ -11,8 +11,8 @@ SystemManager::~SystemManager() {
 }
 
 int SystemManager::createDb(string dbName) {
-    if (this->dbNameHandler->hasElement(dbName)) {
-        cerr << "Database " << dbName << " doesn't exist. Operation failed." << endl;
+    if (this->dbNameHandler->hasElement(dbName) == true) {
+        cerr << "Database " << dbName << " already exists. Operation failed." << endl;
         return -1;
     } else {
         // 添加至数据库名列表
@@ -25,8 +25,11 @@ int SystemManager::createDb(string dbName) {
 
 int SystemManager::dropDb(string dbName) {
     // 检查数据库是否存在
-    if (!this->dbNameHandler->hasElement(dbName)) {
+    if (this->dbNameHandler->hasElement(dbName) == false) {
         cerr << "Database " << dbName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    } else if (this->dbName == dbName) {
+        cerr << "Please close database before drop it." << endl;
         return -1;
     } else {
         // 从数据库名列表中移除
@@ -56,6 +59,9 @@ int SystemManager::openDb(string dbName) {
     // 检查数据库是否存在
     if (!this->dbNameHandler->hasElement(dbName)) {
         cerr << "Database " << dbName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    } else if (this->dbName != "") {
+        cerr << "Database " << this->dbName << " is opened. Can't open two databases at the same time. Operation failed." << endl;
         return -1;
     } else {
         this->dbName = dbName;
