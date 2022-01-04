@@ -41,7 +41,7 @@ db_statement
     | 'SHOW' 'DATABASES'                # show_dbs
     | 'USE' Identifier                  # use_db                  
     | 'SHOW' 'TABLES'                   # show_tables
-	| 'SHOW' 'INDEXES'					# show_indexes
+	| 'SHOW' 'INDEXES' 'FROM' Identifier    # show_indexes
     ;
 
 io_statement
@@ -71,6 +71,8 @@ alter_statement
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'PRIMARY' 'KEY' '(' identifiers ')'      # alter_table_add_pk
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'FOREIGN' 'KEY' '(' identifiers ')' 'REFERENCES' Identifier '(' identifiers ')'  # alter_table_add_foreign_key
     | 'ALTER' 'TABLE' Identifier 'ADD' 'UNIQUE' '(' identifiers ')'   # alter_table_add_unique
+    | 'ALTER' 'TABLE' Identifier 'ADD' Identifier type_ # alter_add_col
+    | 'ALTER' 'TABLE' Identifier 'DROP' 'COLUMN' Identifier # alter_drop_col
     ;
 
 field_list

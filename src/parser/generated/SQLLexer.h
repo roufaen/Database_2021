@@ -20,10 +20,10 @@ public:
     T__32 = 33, T__33 = 34, T__34 = 35, T__35 = 36, T__36 = 37, T__37 = 38, 
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
     T__44 = 45, T__45 = 46, T__46 = 47, T__47 = 48, T__48 = 49, T__49 = 50, 
-    EqualOrAssign = 51, Less = 52, LessEqual = 53, Greater = 54, GreaterEqual = 55, 
-    NotEqual = 56, Count = 57, Average = 58, Max = 59, Min = 60, Sum = 61, 
-    Null = 62, Identifier = 63, Integer = 64, Date = 65, String = 66, Float = 67, 
-    Whitespace = 68, Annotation = 69
+    T__50 = 51, EqualOrAssign = 52, Less = 53, LessEqual = 54, Greater = 55, 
+    GreaterEqual = 56, NotEqual = 57, Count = 58, Average = 59, Max = 60, 
+    Min = 61, Sum = 62, Null = 63, Identifier = 64, Integer = 65, Date = 66, 
+    String = 67, Float = 68, Whitespace = 69, Annotation = 70
   };
 
   explicit SQLLexer(antlr4::CharStream *input);

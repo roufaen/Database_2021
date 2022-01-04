@@ -112,7 +112,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 len[index] = max(len[index], d.stringVal.length());
                 break;
             case DATE:
-                len[index] = max(len[index],8);
+                len[index] = max(len[index],10);
                 break;
             default:
                 std::cerr << "ERROR TYPE IN PRINTING" << std::endl;
@@ -154,8 +154,13 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
             switch (d.varType)
             {
             case INT:
-            case DATE:
                 std::cout << setw(len[index]) << setiosflags(ios::left) << d.intVal;
+                break;
+            case DATE:
+                {
+                    string str = std::to_string(d.intVal/10000) + "-" + std::to_string((d.intVal/100)%100) + "-" + std::to_string(d.intVal%100);
+                    std::cout << setw(len[index]) << setiosflags(ios::left) << str;
+                }
                 break;
             case FLOAT:
                 std::cout << setw(len[index]) << setiosflags(ios::left) << d.floatVal;

@@ -115,6 +115,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitAlter_drop_col(SQLParser::Alter_drop_colContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitField_list(SQLParser::Field_listContext *ctx) override {
     return visitChildren(ctx);
   }
