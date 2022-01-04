@@ -16,6 +16,7 @@ Null: 'NULL';
 
 Identifier: [a-zA-Z_] [a-zA-Z_0-9]*;
 Integer: [0-9]+;
+Date: [1-9] [0-9] [0-9] [0-9] '-' [0-1] [0-9] '-' [0-3] [0-9];
 String:  '\'' (~'\'')* '\'';
 Float: ('-')? [0-9]+ '.' [0-9]*;
 Whitespace: [ \t\n\r]+ -> skip;
@@ -65,8 +66,8 @@ select_table
 alter_statement
     : 'ALTER' 'TABLE' Identifier 'ADD' 'INDEX' '(' identifiers ')'   			# alter_add_index
     | 'ALTER' 'TABLE' Identifier 'DROP' 'INDEX' '(' identifiers ')'             # alter_drop_index
-    | 'ALTER' 'TABLE' Identifier 'DROP' 'PRIMARY' 'KEY' (Identifier)?           # alter_table_drop_pk
-    | 'ALTER' 'TABLE' Identifier 'DROP' 'FOREIGN' 'KEY' Identifier              # alter_table_drop_foreign_key
+    | 'ALTER' 'TABLE' Identifier 'DROP' 'PRIMARY' 'KEY' ( '(' identifiers ')' )?           # alter_table_drop_pk
+    | 'ALTER' 'TABLE' Identifier 'DROP' 'FOREIGN' 'KEY' '(' identifiers ')'              # alter_table_drop_foreign_key
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'PRIMARY' 'KEY' '(' identifiers ')'      # alter_table_add_pk
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'FOREIGN' 'KEY' '(' identifiers ')' 'REFERENCES' Identifier '(' identifiers ')'  # alter_table_add_foreign_key
     | 'ALTER' 'TABLE' Identifier 'ADD' 'UNIQUE' '(' identifiers ')'   # alter_table_add_unique
@@ -86,6 +87,7 @@ type_
     : 'INT'
     | 'VARCHAR' '(' Integer ')'
     | 'FLOAT'
+    | 'DATE'
     ;
 
 value_lists
@@ -100,6 +102,7 @@ value
     : Integer
     | String
     | Float
+    | Date
     | Null
     ;
 

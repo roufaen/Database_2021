@@ -6,11 +6,12 @@
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
 void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data);
+bool isDate(string& dateStr, int& date);
 
 template <class Type>  
 Type getValue(const string& str);
 
-void getFromValue(Data& dt, SQLParser::ValueContext* data);
+bool getFromValue(Data& dt, SQLParser::ValueContext* data);
 
 class MyVisitor: public SQLBaseVisitor {
     private:
@@ -153,6 +154,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitDescribe_table(SQLParser::Describe_tableContext *ctx) override {
+    //TODO
     return visitChildren(ctx);
   }
 
@@ -160,17 +162,30 @@ class MyVisitor: public SQLBaseVisitor {
     if(!(ctx->Identifier() && ctx->value_lists())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     auto list = ctx->value_lists()->value_list();
+    // 为了降低运行时间，以下代码被注释
+    // for(auto i:list){
+    //   for(auto data:i->value()){
+    //     Data dt = {0,0,0, "",0,false};
+    //     if(!getFromValue(dt, data)) {
+    //       std::cerr << "ERROR INPUT VALUE\n";
+    //       return defaultResult();
+    //     }
+    //   }
+    // }
     for(auto i:list){
       std::vector<Data> datalist;
       datalist.clear();
       for(auto data:i->value()){
         Data dt = {0,0,0, "",0,false};
-        getFromValue(dt, data);
+        if(!getFromValue(dt, data)) {
+          std::cerr << "ERROR INPUT VALUE\n";
+          return defaultResult();
+        }
         datalist.push_back(dt);
       }
       qm->exeInsert(tableName.c_str(), datalist); 
     }
-    return visitChildren(ctx);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitDelete_from_table(SQLParser::Delete_from_tableContext *ctx) override {
@@ -194,7 +209,10 @@ class MyVisitor: public SQLBaseVisitor {
     for(int i = 0; i < size; i++)
     {
       Data dt;
-      getFromValue(dt, sc->value(i));
+      if(!getFromValue(dt, sc->value(i))) {
+          std::cerr << "ERROR INPUT VALUE\n";
+          return defaultResult();
+        }
       headerList.push_back(sc->Identifier(i)->getText());
       dataList.push_back(dt);
     }
@@ -250,10 +268,10 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
-    auto& id = ctx->Identifier();
-    if(id.size() == 0) {
+    if(ctx->Identifier()) {
       return defaultResult();
     }
+    auto& id = ctx->identifiers()->Identifier();
     std::vector<std::string> identifiers;
     identifiers.clear();
     for(int i=1; i<id.size(); i++)
@@ -264,14 +282,15 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitAlter_table_drop_foreign_key(SQLParser::Alter_table_drop_foreign_keyContext *ctx) override {
     //Here is the bug located, only initial foreign col name is supported, no foreign name supported.
-    auto& id = ctx->Identifier();
-    if(id.size() != 2) {
+    if(ctx->Identifier()) {
       return defaultResult();
     }
+    std::string tableName = ctx->Identifier()->getText();
+    auto& id = ctx->identifiers()->Identifier();
     std::vector<std::string> listName;
     listName.clear();
     listName.push_back(id[1]->getText());
-    sm->dropForeign(id[0]->getText(),listName);
+    sm->dropForeign(tableName,listName);
     return defaultResult();
   }
 
@@ -350,7 +369,10 @@ class MyVisitor: public SQLBaseVisitor {
       SQLParser::ExpressionContext* ec = woe->expression();
       if(ec->value() != nullptr){
         Data dt = {0,0,0,"",0,false};
-        getFromValue(dt,ec->value());
+        if(!getFromValue(dt, ec->value())) {
+          std::cerr << "ERROR INPUT VALUE\n";
+          return defaultResult();
+        }
         cond.rightFloatVal = dt.floatVal;
         cond.rightStringVal = dt.stringVal;
         cond.rightIntVal = dt.intVal;
