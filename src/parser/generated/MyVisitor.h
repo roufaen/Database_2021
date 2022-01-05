@@ -1,5 +1,6 @@
 #pragma once
 #include "SQLBaseVisitor.h"
+#include "SQLLexer.h"
 #include "antlr4-runtime.h"
 #include "../../query_manager/query_manager.h"
 
@@ -68,8 +69,18 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
-    //TODO
-    printf("I should load data from a file here, but now no interface\n");
+    std::string tableName = ctx->Identifier()->getText();
+    ifstream inFile(ctx->String()->getText(), ios::in);
+    string lineStr;
+    while (getline(inFile, lineStr)){
+      std::string command = "INSERT INTO " + tableName + " VALUES (" + lineStr + ");";
+      antlr4::ANTLRInputStream sInputStream(command);
+      SQLLexer iLexer(&sInputStream);
+      antlr4::CommonTokenStream sTokenStream(&iLexer);
+      SQLParser iParser(&sTokenStream);
+      auto iTree = iParser.program();
+      this->visit(iTree);
+    }
     return visitChildren(ctx);
   }
 
@@ -351,6 +362,27 @@ class MyVisitor: public SQLBaseVisitor {
     // }
     // sm->createUnique(ctx->Identifier()->getText(), listName);
     sm->createUnique(ctx->Identifier()->getText(), ctx->identifiers()->Identifier(0)->getText());
+    return defaultResult();
+  }
+
+  virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *ctx) override {
+    Data defaultData;
+    defaultData.isNull = true;
+    TableHeader th;
+    th.tableName = ctx->Identifier(0)->getText();
+    th.headerName = ctx->Identifier(1)->getText();
+    th.isForeign = false;
+    th.isPrimary = false;
+    th.isUnique = false;
+    th.varType = getVarType(ctx->type_(), th.len);
+    th.hasIndex = false;
+    th.permitNull = true;
+    sm->createColumn(ctx->Identifier(0)->getText(), th, defaultData);
+    return defaultResult();
+  }
+
+  virtual antlrcpp::Any visitAlter_drop_col(SQLParser::Alter_drop_colContext *ctx) override {
+    sm->dropColumn(ctx->Identifier(0)->getText(), ctx->Identifier(1)->getText());
     return defaultResult();
   }
 

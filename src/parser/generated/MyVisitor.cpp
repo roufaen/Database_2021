@@ -51,8 +51,9 @@ bool getFromValue(Data& dt, SQLParser::ValueContext* data){
     }
     if(data->Date())
     {
-        dt.varType = DATE;
-        return isDate(data->Date()->getText(), dt.intVal);
+        if(isDate(data->Date()->getText(), dt.intVal)) dt.varType = DATE;
+        else dt.stringVal = data->Date()->getText();
+        return true;
     }
     if(data->String())
     { 

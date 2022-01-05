@@ -48,8 +48,8 @@ void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarTy
 }
 
 void IndexHandler::removeIndex(std::string _tableName, std::string _colName){
-    std::string treeFileName = tableName + colName + ".tree";
-    std::string keyFileName = tableName + colName + ".key";
+    std::string treeFileName = _tableName + _colName + ".tree";
+    std::string keyFileName = _tableName + _colName + ".key";
     bm->removeFile(treeFileName.c_str());
     bm->removeFile(keyFileName.c_str());
 }
@@ -205,7 +205,7 @@ void IndexHandler::remove(key_ptr key, RID rid){
         }
     }
     if(!flag) {
-        cerr << "No such resord to remove\n";
+        cerr << "No such record to remove\n";
         return;
     }
     int rootIndex;
@@ -257,15 +257,15 @@ void IndexHandler::removeIndex() {
     bm->removeFile(getKeyFilename().c_str());
 }
 
-void IndexHandler::debug(){
-    int index;
-    BPlusNode* node = (BPlusNode*)(treeFile->getPage(treeFile->header->rootPageId, index));
-    for(int i=0; i<49; i++){
-        keyFile->getRecord(node->data[i].keyPos,nowdata);
-        cout << node->data[i].keyPos.pageID << " " << *((int*)nowdata) << std::endl;
-    }
-    treeFile->markPageDirty(index);
-}
+// void IndexHandler::debug(){
+//     int index;
+//     BPlusNode* node = (BPlusNode*)(treeFile->getPage(treeFile->header->rootPageId, index));
+//     for(int i=0; i<49; i++){
+//         keyFile->getRecord(node->data[i].keyPos,nowdata);
+//         cout << node->data[i].keyPos.pageID << " " << *((int*)nowdata) << std::endl;
+//     }
+//     treeFile->markPageDirty(index);
+// }
 void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
     int index;
     BPlusNode* node = (BPlusNode*)(treeFile->getPage(pageID, index));
@@ -373,8 +373,7 @@ void IndexHandler::splitPage(BPlusNode* node, int index) {
 }
 
 void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, int index){
-    int prCount = fa->data[index].count;
-    if(prCount == 1){
+    if(fa->data[index].count == 1){
         int newIndex;
         BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex,true);
         newOP->nodeType = ix::NodeType::OVRFLOW;
@@ -473,6 +472,9 @@ void IndexHandler::mergePage(BPlusNode* node, int index){
     int m2Index;
     BPlusNode* m2 = (BPlusNode*)treeFile->getPage(node->data[index + 1].value.pageID, m2Index);
 
+    treeFile->markPageDirty(m1Index);
+    treeFile->markPageDirty(m2Index);
+
     if(m1->nodeType == ix::NodeType::LEAF) {
         for(int i = 0; i < m2->recs; i++) m1->data[m1->recs + i] = m2->data[i];
         m1->recs += m2->recs;
@@ -487,18 +489,19 @@ void IndexHandler::mergePage(BPlusNode* node, int index){
             treeFile->header->lastLeaf = m1->pageId;
             treeFile->markHeaderPageDirty();
         }
-    } else {
+    } else if(m1->nodeType == ix::NodeType::INTERNAL) {
         for(int i = 1; i < m2->recs; i++) m1->data[m1->recs + i - 1] = m2->data[i];
         m1->recs += m2->recs;
+    } else {
+        cerr << "OVRFLOW PAGE SHOULD NOT BE MERGED\n";
+        return;
     }
 
     node->data[index].count += node->data[index+1].count;
-    node->recs--; //Warning: I make some modifications here
+    node->recs--;
     for(int i=index+1; i<node->recs; i++){
         node->data[i] = node->data[i+1];
     }
-    treeFile->markPageDirty(m1Index);
-    treeFile->markPageDirty(m2Index);
 }
 
 void IndexHandler::borrowFromBackward(BPlusNode* node, int index){

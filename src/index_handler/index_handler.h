@@ -38,7 +38,7 @@ public:
     void closeIndex();
     void removeIndex(std::string tableName, std::string colName);
     void removeIndex();
-    void debug();
+    // void debug();
     friend class IndexScan;
 
 private:
