@@ -153,11 +153,13 @@ void IndexHandler::insert(key_ptr key, RID rid){
 }
 
 bool IndexHandler::has(key_ptr key){
-    return count(key) > 0;
+    return (count(key) > 0);
 }
 
 int IndexHandler::count(key_ptr key){
-    return getCountIn(treeFile->header->rootPageId, key);
+    int ret = getCountIn(treeFile->header->rootPageId, key);
+    std::cout << *((int*)key) << " " << ret << std::endl;
+    return ret;
 }
 
 int IndexHandler::lesserCount(key_ptr key){
@@ -259,7 +261,8 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     if(totalCount() == 0) return ret;
     
     IndexScan lb = lowerBound(key);
-    IndexScan hb = upperBound(key);
+    IndexScan hb = lb;
+    hb.nextKey();
     
     lb.getKey(nowdata);
     if(lb.available() && compare(type, key, nowdata) != 0) return ret;

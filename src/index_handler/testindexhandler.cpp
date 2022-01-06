@@ -12,21 +12,17 @@ int main(){
     for(int i=0; i<600; i++){
         ih->insert((char*)&i, RID{i,i});
         printf("Inserted %d\n", i);
-        //int index = 1;
-        //if( i>=1 && ih->greaterCount((char*)&index) != i-1) break;
     }
     ih->closeIndex();
     ih->openIndex("db","col",INT);
-    IndexScan indexScan = ih->begin();
-    // char* nowdata = new char[MAX_RECORD_LEN];
-    // for(;indexScan.available(); indexScan.next())
-    // {
-    //     indexScan.getKey(nowdata);
-    //     cout << *((int*)nowdata) << " ";
-    // }
-    // cout << endl;
-    // delete[] nowdata;
-    int index = 1;
+    int index = 588;
+    IndexScan indexScan = ih->lowerBound((char*)&index);
+    char* nowdata = new char[MAX_RECORD_LEN];
+    while(indexScan.available()){
+        indexScan.getKey(nowdata);
+        std::cout<<*((int*)nowdata) << std::endl;
+        indexScan.next();
+    }
     ih->insert((char*)&index, RID{1,1});
     printf("Is there any 1? %d\n", ih->count((char*)&index));
     ih->remove((char*)&index, RID{1,1});
