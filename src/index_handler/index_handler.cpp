@@ -174,16 +174,41 @@ IndexScan IndexHandler::begin(){
     return ret;
 }
 
-IndexScan IndexHandler::lowerBound(key_ptr key){
+IndexScan IndexHandler::lowerBound(key_ptr key){ //Weakly small
     if(totalCount() == 0) return IndexScan(this);
     else return getLowerBound(treeFile->header->rootPageId, key);
 }
 
-IndexScan IndexHandler::upperBound(key_ptr key){
+IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
     if(totalCount() == 0) return IndexScan(this);
     IndexScan it = lowerBound(key);
-    if(it.available()) it.nextKey();
-        else it.setToBegin();
+    if(it.available()) {
+        it.getKey(nowdata);
+        if(compare(type, key, nowdata) == -1) it.nextKey();
+    }
+    else it.setToBegin();
+    return it;
+}
+
+IndexScan IndexHandler::lesserBound(key_ptr key){ //Strictly small
+    if(totalCount() == 0) return IndexScan(this);
+    IndexScan it = lowerBound(key);
+    if(it.available()) {
+        it.getKey(nowdata);
+        if(compare(type, key, nowdata) == 0) it.previousKey();
+    }
+    else it.setToBegin();
+    return it;
+}
+
+IndexScan IndexHandler::greaterBound(key_ptr key){ //Strictly big
+    if(totalCount() == 0) return IndexScan(this);
+    IndexScan it = upperBound(key);
+    if(it.available()) {
+        it.getKey(nowdata);
+        if(compare(type, key, nowdata) == 0) it.nextKey();
+    }
+    else it.setToBegin();
     return it;
 }
 

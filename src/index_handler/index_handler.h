@@ -28,11 +28,13 @@ public:
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
     int count(key_ptr key);
-    int lesserCount(key_ptr key);
-    int greaterCount(key_ptr key);
+    int lesserCount(key_ptr key); //Strictly
+    int greaterCount(key_ptr key); //Strictly
     IndexScan begin();
-    IndexScan lowerBound(key_ptr key);
-    IndexScan upperBound(key_ptr key);
+    IndexScan lesserBound(key_ptr key); //Strictly
+    IndexScan greaterBound(key_ptr key); //Strictly
+    IndexScan lowerBound(key_ptr key); //Weakly
+    IndexScan upperBound(key_ptr key); //Weakly
     std::vector<RID> getRIDs(key_ptr key);
     int totalCount();
     void closeIndex();
