@@ -9,6 +9,7 @@ VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
 void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data);
 void print(const string header, const vector<string>& data);
+void print(const vector<string>& tableName, const vector<vector<string>>& data);
 bool isDate(string dateStr, int& date);
 
 template <class Type>  
@@ -192,8 +193,49 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitDescribe_table(SQLParser::Describe_tableContext *ctx) override {
-    //TODO
-    return visitChildren(ctx);
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(ctx->Identifier()->getText(), th);
+    std::vector<string> tb;
+    tb.clear();
+    tb.push_back("Field");
+    tb.push_back("Type");
+    tb.push_back("Null");
+    tb.push_back("Key");
+    tb.push_back("Extra");
+    std::vector<vector<std::string>> vec;
+    for(auto t:th){
+      vector<string> ve;
+      ve.clear();
+      ve.push_back(t.tableName);
+      switch(t.varType){
+        case INT:
+          ve.push_back("INT");
+          break;
+        case FLOAT:
+          ve.push_back("FLOAT");
+          break;
+        case VARCHAR:
+          ve.push_back("VARCHAR("+to_string(t.len)+")");
+          break;
+        case DATE:
+          ve.push_back("DATE");
+          break;
+      }
+      if(t.permitNull) ve.push_back("YES");
+      else ve.push_back("NO");
+      std::string key;
+      int fig = (int)t.isForeign + (int)t.isUnique + (int)t.isPrimary;
+      if(fig>1) key = "MUL";
+      else if(t.isForeign) key = "FOR";
+      else if(t.isUnique) key = "UNI";
+      else if(t.isPrimary) key = "PRI";
+      ve.push_back(key);
+      ve.push_back("");
+      vec.push_back(ve);
+    }
+    print(tb,vec);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitInsert_into_table(SQLParser::Insert_into_tableContext *ctx) override {

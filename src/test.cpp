@@ -9,11 +9,11 @@ int main(){
     IndexHandler* ih = new IndexHandler(bm);
     SystemManager* sm = new SystemManager(ih, bm);
     QueryManager* qm = new QueryManager(ih, sm, bm);
-    std::cout<<"$";
+    std::cout<<"$> ";
     std::string command;
     while(getline(cin, command)){
         parse(command, qm, ih, sm);
-        std::cout<<"$";
+        std::cout<<"$> ";
     }
     return 0;
 }

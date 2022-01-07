@@ -70,6 +70,8 @@ bool getFromValue(Data& dt, SQLParser::ValueContext* data){
     if(data->String())
     { 
         dt.stringVal = data->String()->getText();
+        int len = dt.stringVal.length();
+        dt.stringVal = dt.stringVal.substr(1, len-2);
         dt.varType = VARCHAR;
         return true;
     }
@@ -148,7 +150,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<"|";
     for(int i=0; i<num_of_col; i++)
     {
-        std::cout<<setw(len[i])<<(tableName[i] + "." + colName[i]);
+        std::cout << setw(len[i]) << setiosflags(ios::left) <<(tableName[i] + "." + colName[i]);
         std::cout<<"|";
     }
     std::cout << std::endl;
@@ -160,8 +162,8 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
        std::cout<<"+";
     }
     std::cout<<std::endl;
-    std::cout << "|";
     for(auto dt:data){
+        std::cout << "|";
         int index = 0;
         for(auto d:dt){
             if(d.isNull) std::cout << setw(len[index]) << setiosflags(ios::left) << "NULL";
@@ -203,6 +205,64 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<std::endl;
 }
 
+void print(const vector<string>& tableName,  const vector<vector<string>>& data){
+    auto t_i = tableName.begin();
+    vector<int> len;
+    while(t_i!=tableName.end()){
+        len.push_back((*t_i).length());
+        t_i++;
+    }
+    for(auto dt:data){
+        int index = 0;
+        for(auto d:dt){ 
+            len[index] = max(len[index], d.length());
+            index++;
+        }
+    }
+    int num_of_col = tableName.size();
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+    std::cout<<"|";
+    for(int i=0; i<num_of_col; i++)
+    {
+        std::cout << setw(len[i]) << setiosflags(ios::left) <<tableName[i];
+        std::cout<<"|";
+    }
+    std::cout << std::endl;
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+    for(auto dt:data){
+        std::cout << "|";
+        int index = 0;
+        for(auto d:dt){
+            std::cout << setw(len[index]) << setiosflags(ios::left) << d;
+            index++;
+            std::cout << "|";
+        }
+        std::cout << std::endl;
+    }
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+}
+
 void print(const string tableName, const vector<string>& data){
     if(!data.size()) {
         std::cout << "Sorry, but we found no " << tableName << "!" << std::endl;
@@ -226,10 +286,9 @@ void print(const string tableName, const vector<string>& data){
         std::cout<<"-";
     std::cout<<"+";
     std::cout<<std::endl;
-    std::cout << "|";
     for(auto dt:data){
-        std::cout << setw(len) << setiosflags(ios::left) << dt;
-        std::cout << "|";
+        std::cout << "|" << setw(len) << setiosflags(ios::left) << dt;
+        std::cout << "|" << std::endl;;
     }
     std::cout << std::endl;
     std::cout<<"+";
