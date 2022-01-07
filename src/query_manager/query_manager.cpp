@@ -34,7 +34,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                 headerList.push_back(originalHeaderList[j]);
             }
             vector <RID> rids = table->getRecordList();
-            /*for (int j = 0; j < (int)conditionList.size(); j++) {
+            for (int j = 0; j < (int)conditionList.size(); j++) {
                 if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
                     continue;
                 }
@@ -91,7 +91,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                         }
                     }
                 }
-            }*/
+            }
             ridList.push_back(rids);
             totNum *= rids.size();
         }

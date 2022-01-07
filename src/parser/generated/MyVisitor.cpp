@@ -5,14 +5,22 @@
 VarType getVarType(SQLParser::Type_Context* tc, int& len){
     int type = tc->getAltNumber();
     switch(type){
-        case 1: len=4;
+        case 1: {
+            len=4;
             return INT;
-        case 2: len=getValue<int>(tc->Integer()->getText());
+        }
+        case 2: {
+            len=getValue<int>(tc->Integer()->getText());
             return VARCHAR;
-        case 3: len=4;
+        }
+        case 3: {
+            len=4;
             return FLOAT;
-        case 4: len=4;
+        }
+        case 4: {
+            len=4;
             return DATE;
+        }
     }
     len=0;
     return VARCHAR;
@@ -37,6 +45,7 @@ Type getValue(const string& str){
 }
 
 bool getFromValue(Data& dt, SQLParser::ValueContext* data){
+    dt.isNull = false;
     if(data->Float())
     { 
         dt.floatVal = getValue<float>(data->Float()->getText());
@@ -52,7 +61,10 @@ bool getFromValue(Data& dt, SQLParser::ValueContext* data){
     if(data->Date())
     {
         if(isDate(data->Date()->getText(), dt.intVal)) dt.varType = DATE;
-        else dt.stringVal = data->Date()->getText();
+        else {
+            dt.stringVal = data->Date()->getText();
+            dt.varType = VARCHAR;
+        }
         return true;
     }
     if(data->String())
@@ -105,8 +117,10 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 len[index] = max(len[index], getNumLen(d.intVal));
                 break;
             case FLOAT:
-                double ftval = (d.floatVal < 0) ? -d.floatVal : d.floatVal;
-                len[index] = max(len[index], (ftval>999999?getNumLen(ftval):7)+(d.floatVal<0));
+                {
+                    double ftval = (d.floatVal < 0) ? -d.floatVal : d.floatVal;
+                    len[index] = max(len[index], (ftval>999999?getNumLen(ftval):7)+(d.floatVal<0));
+                }
                 break;
             case VARCHAR:
             case CHAR:
@@ -175,10 +189,10 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 break;
             }
             index++;
+            std::cout << "|";
         }
-        std::cout << "|";
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
     std::cout<<"+";
     for(int i=0; i<num_of_col; i++)
     {
@@ -189,7 +203,44 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<std::endl;
 }
 
-bool isDate(string& dateStr, int& date){
+void print(const string tableName, const vector<string>& data){
+    if(!data.size()) {
+        std::cout << "Sorry, but we found no " << tableName << "!" << std::endl;
+        return;
+    }
+    int len = tableName.length();
+    for(auto dt:data){ 
+        len = max(len, dt.length());
+    }
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+    std::cout<<"|";
+    std::cout<<setw(len)<<(tableName);
+    std::cout<<"|";
+    std::cout << std::endl;
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+    std::cout << "|";
+    for(auto dt:data){
+        std::cout << setw(len) << setiosflags(ios::left) << dt;
+        std::cout << "|";
+    }
+    std::cout << std::endl;
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+}
+
+
+bool isDate(string dateStr, int& date){
     int yr = getValue<int>(dateStr.substr(0, 4));
     int mt = getValue<int>(dateStr.substr(5, 2));
     int dt = getValue<int>(dateStr.substr(8, 2));
