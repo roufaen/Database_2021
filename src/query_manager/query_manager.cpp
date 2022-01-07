@@ -22,6 +22,16 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
         wholeList.push_back(conditionList[i].leftTableName);
         if (conditionList[i].useColumn == true) {
             wholeList.push_back(conditionList[i].rightTableName);
+        } else {
+            Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
+            vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
+            for (int j = 0; j < (int)leftTableHeader.size(); j++) {
+                if (conditionList[i].leftCol == leftTableHeader[j].headerName && conditionList[i].rightType == INT && leftTableHeader[j].varType == FLOAT) {
+                    conditionList[i].rightType = FLOAT;
+                    conditionList[i].rightFloatVal = conditionList[i].rightIntVal;
+                    break;
+                }
+            }
         }
     }
 
@@ -176,8 +186,13 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) 
             return -1;
         // 是否类型不符
         } else if (dataList[i].varType != headerList[i].varType && !((dataList[i].varType == CHAR || dataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
-            cerr << "Column " << headerList[i].headerName<< " data type mismatch. Operation failed." << endl;
-            return -1;
+            if (dataList[i].varType == INT && headerList[i].varType == FLOAT) {
+                dataList[i].varType = FLOAT;
+                dataList[i].floatVal = dataList[i].intVal;
+            } else {
+                cerr << "Column " << headerList[i].headerName<< " data type mismatch. Operation failed." << endl;
+                return -1;
+            }
         // 字符串长度是否非法
         } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && (int)dataList[i].stringVal.size() > headerList[i].len) {
             cerr << "String \"" << dataList[i].stringVal << "\" too long. Operation failed." << endl;
@@ -248,6 +263,20 @@ int QueryManager::exeDelete(string tableName, vector <Condition> conditionList) 
     vector <TableHeader> headerList = table->getHeaderList();
     vector <RID> ridList = table->getRecordList();
 
+    for (int i = 0; i < (int)conditionList.size(); i++) {
+        if (conditionList[i].useColumn == false) {
+            Table *leftTable = this->systemManager->getTable(tableName);
+            vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
+            for (int j = 0; j < (int)leftTableHeader.size(); j++) {
+                if (conditionList[i].leftCol == leftTableHeader[j].headerName && conditionList[i].rightType == INT && leftTableHeader[j].varType == FLOAT) {
+                    conditionList[i].rightType = FLOAT;
+                    conditionList[i].rightFloatVal = conditionList[i].rightIntVal;
+                    break;
+                }
+            }
+        }
+    }
+
     // 主键不能被引用，否则无法删除
     for (int i = 0; i < (int)ridList.size(); i++) {
         vector <Data> dataList = table->exeSelect(ridList[i]);
@@ -288,6 +317,21 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     vector <RID> ridList = table->getRecordList();
     vector <int> updatePos;
     vector <Data> updateDataList;
+
+    for (int i = 0; i < (int)conditionList.size(); i++) {
+        if (conditionList[i].useColumn == false) {
+            Table *leftTable = this->systemManager->getTable(tableName);
+            vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
+            for (int j = 0; j < (int)leftTableHeader.size(); j++) {
+                if (conditionList[i].leftCol == leftTableHeader[j].headerName && conditionList[i].rightType == INT && leftTableHeader[j].varType == FLOAT) {
+                    conditionList[i].rightType = FLOAT;
+                    conditionList[i].rightFloatVal = conditionList[i].rightIntVal;
+                    break;
+                }
+            }
+        }
+    }
+
     // 预处理
     int updateCount = 0;
     for (int i = 0; i < (int)headerList.size(); i++) {
@@ -322,8 +366,13 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
             return -1;
         // 是否类型不符
         } else if (updatePos[i] == 1 && updateDataList[i].varType != headerList[i].varType && !((updateDataList[i].varType == CHAR || updateDataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
-            cerr << "Column " << headerList[i].headerName<< " data type mismatch. Operation failed." << endl;
-            return -1;
+            if (updateDataList[i].varType == INT && headerList[i].varType == FLOAT) {
+                updateDataList[i].varType = FLOAT;
+                updateDataList[i].floatVal = updateDataList[i].intVal;
+            } else {
+                cerr << "Column " << headerList[i].headerName<< " data type mismatch. Operation failed." << endl;
+                return -1;
+            }
         // 字符串长度是否非法
         } else if (updatePos[i] == 1 && headerList[i].varType == CHAR && (int)updateDataList[i].stringVal.size() > headerList[i].len) {
             cerr << "String \"" << updateDataList[i].stringVal << "\" too long. Operation failed." << endl;

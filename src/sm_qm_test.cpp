@@ -296,6 +296,55 @@ void testPrimaryAndForeign() {
     for (int i = 0; i < (int)vecResult.size(); i++) {
         cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
     }
+    assert(queryManager->exeDelete("teacher", vecCondition) == 0);
+    cout << "[-----Test passed-----]" << endl << endl;
+}
+
+void testAlter() {
+    cout << "[-----Test Alter-----]" << endl;
+    // 初始数据
+    vecData.clear();
+    data.varType = INT, data.intVal = 0, data.isNull = false;  vecData.push_back(data);
+    data.varType = VARCHAR, data.stringVal = "teacher", data.isNull = false;  vecData.push_back(data);
+    data.varType = FLOAT, data.floatVal = 0.0, data.isNull = false;  vecData.push_back(data);
+    for (int i = 0; i < 3; i++) {
+        vecData[0].intVal = i;
+        vecData[2].floatVal = i * 1.2;
+        assert(queryManager->exeInsert("teacher", vecData) == 0);
+    }
+    // 加列
+    tableHeader.headerName = "age";  tableHeader.varType = INT;  tableHeader.permitNull = false;
+    data.varType = INT, data.intVal = 30, data.isNull = false;
+    assert(systemManager->createColumn("teacher", tableHeader, data) == 0);
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");  vecString[1].push_back("age");
+    vecResult.clear();
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 0, 0});
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be three lines below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << " " << vecResult[i][3].intVal << endl;
+    }
+    // 加 unique 后删列
+    vecString[0].clear();
+    vecString[0].push_back("id");  vecString[0].push_back("data");
+    assert(systemManager->createUnique("teacher", vecString[0]) == 0);
+    data.varType = INT, data.intVal = 30, data.isNull = false;  vecData.push_back(data);
+    assert(queryManager->exeInsert("teacher", vecData) == -1);
+    assert(systemManager->dropColumn("teacher", "data") == 0);
+    vecData.erase(vecData.begin() + 2);
+    assert(queryManager->exeInsert("teacher", vecData) == 0);
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("age");
+    vecResult.clear();
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 0, 0});
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be four lines below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
+    }
     cout << "[-----Test passed-----]" << endl << endl;
 }
 
@@ -315,6 +364,10 @@ int main(){
     queryManager = new QueryManager(indexHandler, systemManager, bufManager);
 
     testDatabaseAndTable();
+    testSingleTable();
+    testPrimaryAndForeign();
+    testAlter();
+
     /*// 表头
     vecTableHeader.clear();
     tableHeader.tableName = "tb0", tableHeader.headerName = "a", tableHeader.varType = INT, tableHeader.permitNull = false;  vecTableHeader.push_back(tableHeader);
@@ -350,9 +403,7 @@ int main(){
         cout << vecResult[i][0].floatVal << endl;
     }*/
 
-    testSingleTable();
-    testPrimaryAndForeign();
-    
+
     /*tableHeader.clear();
     tableHeader.push_back(TableHeader{"teacher", "id", "", "", INT, 4, 0, 0, true, false, false, false, false});
     tableHeader.push_back(TableHeader{"teacher", "name", "", "", VARCHAR, 10, 0, 0, false, false, false, false, false});
