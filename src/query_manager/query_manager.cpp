@@ -14,27 +14,35 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     vector <TableHeader> headerList;
     vector <vector <RID> > ridList;
     map <string, int> tableMap;
+    vector <string> wholeList = tableNameList;
     string dbName = this->systemManager->getDbName();
     int totNum = 1;
 
+    for (int i = 0; i < (int)conditionList.size(); i++) {
+        wholeList.push_back(conditionList[i].leftTableName);
+        if (conditionList[i].useColumn == true) {
+            wholeList.push_back(conditionList[i].rightTableName);
+        }
+    }
+
     // 获取用到的所有 table ，其 header 进行连接
-    for (int i = 0; i < (int)tableNameList.size(); i++) {
+    for (int i = 0; i < (int)wholeList.size(); i++) {
         // 判断 table 是否存在
-        if (!this->systemManager->hasTable(tableNameList[i])) {
-            cerr << "Table " << tableNameList[i] << " doesn't exist. Operation failed." << endl;
+        if (!this->systemManager->hasTable(wholeList[i])) {
+            cerr << "Table " << wholeList[i] << " doesn't exist. Operation failed." << endl;
             return -1;
         }
 
-        if (tableMap.count(tableNameList[i]) == 0) {
-            tableMap[tableNameList[i]] = i;
-            Table *table = this->systemManager->getTable(tableNameList[i]);
+        if (tableMap.count(wholeList[i]) == 0) {
+            tableMap[wholeList[i]] = i;
+            Table *table = this->systemManager->getTable(wholeList[i]);
             tableList.push_back(table);
             vector <TableHeader> originalHeaderList = table->getHeaderList();
             for (int j = 0; j < (int)originalHeaderList.size(); j++) {
                 headerList.push_back(originalHeaderList[j]);
             }
             vector <RID> rids = table->getRecordList();
-            /*for (int j = 0; j < (int)conditionList.size(); j++) {
+            for (int j = 0; j < (int)conditionList.size(); j++) {
                 if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
                     continue;
                 }
@@ -91,22 +99,24 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                         }
                     }
                 }
-            }*/
+            }
             ridList.push_back(rids);
             totNum *= rids.size();
         }
 
         // 判断 header 是否存在
-        vector <TableHeader> originalHeaderList = tableList[tableMap[tableNameList[i]]]->getHeaderList();
-        bool headerFind = false;
-        for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-            if (originalHeaderList[j].headerName == selectorList[i]) {
-                headerFind = true;
+        if (i < (int)tableNameList.size()) {
+            vector <TableHeader> originalHeaderList = tableList[tableMap[tableNameList[i]]]->getHeaderList();
+            bool headerFind = false;
+            for (int j = 0; j < (int)originalHeaderList.size(); j++) {
+                if (originalHeaderList[j].headerName == selectorList[i]) {
+                    headerFind = true;
+                }
             }
-        }
-        if (headerFind == false) {
-            cerr << "Column " << selectorList[i] << " doesn't exist. Operation failed." << endl;
-            return -1;
+            if (headerFind == false) {
+                cerr << "Column " << selectorList[i] << " doesn't exist. Operation failed." << endl;
+                return -1;
+            }
         }
     }
 

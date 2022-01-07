@@ -38,9 +38,10 @@ void testDatabaseAndTable() {
     assert(systemManager->createTable("teacher", vecTableHeader) == -1);
     // 切换数据库
     assert(systemManager->openDb("courses") == 0);
-    // 打开多个数据库
-    assert(systemManager->openDb("students") == -1);
+    // 打开数据库
+    assert(systemManager->openDb("students") == 0);
     // 删除打开的数据库
+    assert(systemManager->openDb("courses") == 0);
     assert(systemManager->dropDb("courses") == -1);
     // 删除数据库
     assert(systemManager->dropDb("students") == 0);
@@ -314,6 +315,41 @@ int main(){
     queryManager = new QueryManager(indexHandler, systemManager, bufManager);
 
     testDatabaseAndTable();
+    /*// 表头
+    vecTableHeader.clear();
+    tableHeader.tableName = "tb0", tableHeader.headerName = "a", tableHeader.varType = INT, tableHeader.permitNull = false;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "tb0", tableHeader.headerName = "b", tableHeader.varType = INT, tableHeader.permitNull = false;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "tb0", tableHeader.headerName = "c", tableHeader.varType = FLOAT, tableHeader.permitNull = true;  vecTableHeader.push_back(tableHeader);
+    // 创建表
+    assert(systemManager->createTable("tb0", vecTableHeader) == 0);
+    // 表头
+    vecTableHeader.clear();
+    tableHeader.tableName = "tb1", tableHeader.headerName = "a", tableHeader.varType = INT, tableHeader.permitNull = true;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "tb1", tableHeader.headerName = "b", tableHeader.varType = INT, tableHeader.permitNull = true;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "tb1", tableHeader.headerName = "c", tableHeader.varType = DATE, tableHeader.permitNull = true;  vecTableHeader.push_back(tableHeader);
+    // 创建表
+    assert(systemManager->createTable("tb1", vecTableHeader) == 0);
+    // 插入数据
+    vecData.clear();
+    data.varType = INT, data.intVal = 0, data.isNull = false;  vecData.push_back(data);
+    data.varType = INT, data.intVal = 0, data.isNull = false;  vecData.push_back(data);
+    data.varType = FLOAT, data.floatVal = 1.2, data.isNull = false;  vecData.push_back(data);
+    assert(queryManager->exeInsert("tb0", vecData) == 0);
+    vecData[2].floatVal = 1.3;  assert(queryManager->exeInsert("tb0", vecData) == 0);
+    vecData[1].intVal = 1;  vecData[2].floatVal = 1.4;  assert(queryManager->exeInsert("tb0", vecData) == 0);
+    vecData[1].intVal = 0;  vecData[2].varType = DATE;  vecData[2].intVal = 20200101;  assert(queryManager->exeInsert("tb1", vecData) == 0);
+
+    vecString[0].clear();  vecString[0].push_back("tb0");
+    vecString[1].clear();  vecString[1].push_back("c");
+    vecCondition.clear();
+    vecCondition.push_back(Condition{EQUAL, INT, false, true, "tb0", "tb1", "a", "a", "", 0, 0});
+    vecCondition.push_back(Condition{EQUAL, INT, false, true, "tb0", "tb1", "b", "b", "", 0, 0});
+    vecResult.clear();
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].floatVal << endl;
+    }*/
+
     testSingleTable();
     testPrimaryAndForeign();
     

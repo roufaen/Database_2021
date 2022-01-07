@@ -66,18 +66,16 @@ int SystemManager::openDb(string dbName) {
         cerr << "Database " << dbName << " doesn't exist. Operation failed." << endl;
         return -1;
     } else if (this->dbName != "") {
-        cerr << "Database " << this->dbName << " is opened. Can't open two databases at the same time. Operation failed." << endl;
-        return -1;
-    } else {
-        this->dbName = dbName;
-        this->tableNameHandler = new NameHandler(this->bufManager, dbName);
-        vector <string> tableNameList = this->tableNameHandler->getElementList();
-        for (int i = 0; i < (int)tableNameList.size(); i++) {
-            Table *table = new Table(dbName, tableNameList[i], this->bufManager);
-            this->tableList.push_back(table);
-        }
-        return 0;
+        closeDb();
     }
+    this->dbName = dbName;
+    this->tableNameHandler = new NameHandler(this->bufManager, dbName);
+    vector <string> tableNameList = this->tableNameHandler->getElementList();
+    for (int i = 0; i < (int)tableNameList.size(); i++) {
+        Table *table = new Table(dbName, tableNameList[i], this->bufManager);
+        this->tableList.push_back(table);
+    }
+    return 0;
 }
 
 int SystemManager::closeDb() {
