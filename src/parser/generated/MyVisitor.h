@@ -88,8 +88,9 @@ class MyVisitor: public SQLBaseVisitor {
     ifstream inFile(fileID, ios::in);
     string lineStr;
     std::vector<Data> datalist;
+    int accumulate = 0;
     while (getline(inFile, lineStr)){
-      //std::cout << lineStr << std::endl;
+      std::cout << (accumulate++) << std::endl;
       datalist.clear();
       istringstream sin(lineStr);
       string field;
@@ -217,7 +218,7 @@ class MyVisitor: public SQLBaseVisitor {
     for(auto t:th){
       vector<string> ve;
       ve.clear();
-      ve.push_back(t.tableName);
+      ve.push_back(t.headerName);
       switch(t.varType){
         case INT:
           ve.push_back("INT");
@@ -443,8 +444,6 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *ctx) override {
-    Data defaultData;
-    defaultData.isNull = true;
     TableHeader th;
     th.tableName = ctx->Identifier(0)->getText();
     th.headerName = ctx->Identifier(1)->getText();
@@ -454,6 +453,9 @@ class MyVisitor: public SQLBaseVisitor {
     th.varType = getVarType(ctx->type_(), th.len);
     th.hasIndex = false;
     th.permitNull = true;
+    Data defaultData;
+    defaultData.isNull = true;
+    defaultData.varType = th.varType;
     sm->createColumn(ctx->Identifier(0)->getText(), th, defaultData);
     return defaultResult();
   }
