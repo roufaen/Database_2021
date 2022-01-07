@@ -18,6 +18,8 @@ public:
     int exeSelect(vector <string> tableNameList, vector <string> selectorList, vector <Condition> conditionList, vector <vector <Data>>& resData);
     // 向名为 tableName 的表中插入一条数据 dataList
     int exeInsert(string tableName, vector <Data> dataList);
+    // 向名为 tableName 的表中插入一条数据 dataList
+    int exeInsert(string tableName, vector <Data> dataList, RID& rid);
     // 从名为 tableName 的表中删除符合筛选条件的数据
     int exeDelete(string tableName, vector <Condition> conditionList);
     // 在名为 tableName 的表中更新数据，修改 updateHeaderNameList 中的列，每列数据修改为 updateDataList 中对应列的数据，筛选条件为 conditionList
@@ -29,6 +31,7 @@ public:
 
 private:
     bool foreignKeyExistJudge(TableHeader header, Data data);
+    bool judgeUnique(string tableName, vector <string> judgeHeaderList, vector <Data> judgeDataList);
     IndexHandler *indexHandler;
     SystemManager *systemManager;
     BufManager *bufManager;

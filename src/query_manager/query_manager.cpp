@@ -34,6 +34,64 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                 headerList.push_back(originalHeaderList[j]);
             }
             vector <RID> rids = table->getRecordList();
+            /*for (int j = 0; j < (int)conditionList.size(); j++) {
+                if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
+                    continue;
+                }
+                for (int k = 0; k < (int)originalHeaderList.size(); k++) {
+                    if (originalHeaderList[k].isPrimary == true || originalHeaderList[k].isUnique == true || originalHeaderList[k].hasIndex == true) {
+                        if (conditionList[j].leftTableName == originalHeaderList[k].tableName && conditionList[j].leftCol == originalHeaderList[k].headerName) {
+                            key_ptr key;
+                            char str[MAX_RECORD_LEN];
+                            if ((conditionList[j].rightType == INT && originalHeaderList[k].varType == INT) || (conditionList[j].rightType == DATE && originalHeaderList[k].varType == DATE)) {
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, INT);
+                                key = (char*)&conditionList[j].rightIntVal;
+                            } else if (conditionList[j].rightType == FLOAT && originalHeaderList[k].varType == FLOAT) {
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, FLOAT);
+                                key = (char*)&conditionList[j].rightFloatVal;
+                            } else if ((conditionList[j].rightType == CHAR || conditionList[j].rightType == VARCHAR) && (originalHeaderList[k].varType == CHAR || originalHeaderList[k].varType == VARCHAR)) {
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, VARCHAR);
+                                memcpy(str, conditionList[j].rightStringVal.c_str(), conditionList[j].rightStringVal.size());
+                                key = str;
+                            }
+                            vector <RID> tmpRids;
+                            if (conditionList[j].condType == EQUAL) {
+                                tmpRids = this->indexHandler->getRIDs(key);
+                            } else {
+                                if (conditionList[j].condType == LESS_EQUAL) {
+                                    IndexScan indexScanner = this->indexHandler->lowerBound(key);
+                                    while(indexScanner.available()) {
+                                        tmpRids.push_back(indexScanner.getValue());
+                                        indexScanner.next();
+                                    }
+                                } else if (conditionList[j].condType == LESS) {
+                                    IndexScan indexScanner = this->indexHandler->lesserBound(key);
+                                    while(indexScanner.available()) {
+                                        tmpRids.push_back(indexScanner.getValue());
+                                        indexScanner.next();
+                                    }
+                                } else if (conditionList[j].condType == GREATER_EQUAL) {
+                                    IndexScan indexScanner = this->indexHandler->upperBound(key);
+                                    while(indexScanner.available()) {
+                                        tmpRids.push_back(indexScanner.getValue());
+                                        indexScanner.next();
+                                    }
+                                } else if (conditionList[j].condType == GREATER) {
+                                    IndexScan indexScanner = this->indexHandler->greaterBound(key);
+                                    while(indexScanner.available()) {
+                                        tmpRids.push_back(indexScanner.getValue());
+                                        indexScanner.next();
+                                    }
+                                }
+                            }
+                            indexHandler->closeIndex();
+                            if (tmpRids.size() < rids.size()) {
+                                rids = tmpRids;
+                            }
+                        }
+                    }
+                }
+            }*/
             ridList.push_back(rids);
             totNum *= rids.size();
         }
@@ -81,6 +139,11 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
 }
 
 int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
+    RID rid;
+    return exeInsert(tableName, dataList, rid);
+}
+
+int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) {
     // 判断 table 是否存在
     if (!this->systemManager->hasTable(tableName)) {
         cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
@@ -90,6 +153,7 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
     vector <TableHeader> headerList = table->getHeaderList();
     vector <RID> ridList = table->getRecordList();
     vector <vector <Data> > dataLists;
+    int maxGroup = -1;
     // 数据长度不符
     if (dataList.size() != headerList.size()) {
         cerr << "Data list size incorrect. Operation failed." << endl;
@@ -109,26 +173,14 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
             cerr << "String \"" << dataList[i].stringVal << "\" too long. Operation failed." << endl;
             return -1;
         }
-    }
-    for (int i = 0; i < (int)ridList.size(); i++) {
-        dataLists.push_back(table->exeSelect(ridList[i]));
-    }
-    for (int i = 0; i < (int)headerList.size(); i++) {
-        if ((headerList[i].isPrimary == true || headerList[i].isUnique == true) && dataList[i].isNull == false) {
-            // 检查是否满足 unique 要求
-            for (int j = 0; j < (int)dataLists.size(); j++) {
-                if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataList[i].intVal == dataLists[j][i].intVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                } else if (headerList[i].varType == FLOAT && dataList[i].floatVal == dataLists[j][i].floatVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataList[i].stringVal == dataLists[j][i].stringVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                }
-            }
+        if (headerList[i].isUnique == true) {
+            maxGroup = headerList[i].uniqueGroup > maxGroup ? headerList[i].uniqueGroup : maxGroup;
         }
+    }
+    /*for (int i = 0; i < (int)ridList.size(); i++) {
+        dataLists.push_back(table->exeSelect(ridList[i]));
+    }*/
+    for (int i = 0; i < (int)headerList.size(); i++) {
         if (headerList[i].isForeign == true && dataList[i].isNull == false) {
             // 外键不能引用不存在的键
             if (foreignKeyExistJudge(headerList[i], dataList[i]) == false) {
@@ -143,9 +195,35 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList) {
             }
         }
     }
+    // 判断是否满足 unique 要求
+    vector <string> judgeHeaderList;
+    vector <Data> judgeDataList;
+    for (int i = 0; i <= maxGroup; i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerList[j].isUnique == true && headerList[j].uniqueGroup == i) {
+                judgeHeaderList.push_back(headerList[j].headerName);
+                judgeDataList.push_back(dataList[j]);
+            }
+        }
+        if (judgeUnique(tableName, judgeHeaderList, judgeDataList) == false) {
+            cerr << "Data don't satisfy unique requirement." << endl;
+            return -1;
+        }
+        judgeHeaderList.clear();  judgeDataList.clear();
+    }
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].isPrimary == true) {
+            judgeHeaderList.push_back(headerList[i].headerName);
+            judgeDataList.push_back(dataList[i]);
+        }
+    }
+    if (judgeUnique(tableName, judgeHeaderList, judgeDataList) == false) {
+        cerr << "Data don't satisfy unique requirement." << endl;
+        return -1;
+    }
 
     // 插入数据和索引
-    this->systemManager->opInsert(tableName, dataList);
+    rid = this->systemManager->opInsert(tableName, dataList);
 
     return 0;
 }
@@ -212,6 +290,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
                 updateCount++;
             // 判断是否重复修改某些列的值
             } else if (headerList[i].headerName == updateHeaderNameList[j] && updateHere == 1) {
+                cerr << "Input data format error. Operation failed." << endl;
                 return -1;
             }
         }
@@ -243,17 +322,45 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     }
 
     // 寻找符合条件的数据
-    vector <vector <Data> > dataLists;
-    vector <RID> updateRidList;
+    vector <vector <Data> > dataLists, originalDataLists;
+    vector <RID> updateRidList, updatedRidList;
     for (int i = 0; i < (int)ridList.size(); i++) {
         vector <Data> dataList = table->exeSelect(ridList[i]);
         if (conditionJudge(headerList, dataList, conditionList)) {
+            for (int j = 0; j < (int)headerList.size(); j++) {
+                if (updatePos[j] == 1 && headerList[j].isPrimary == true && dataList[j].refCount != 0) {
+                    cerr << "Column " << headerList[j].headerName << " has elements referenced. Operation failed." << endl;
+                }
+            }
             dataLists.push_back(dataList);
+            originalDataLists.push_back(dataList);
             updateRidList.push_back(ridList[i]);
         }
     }
 
-    // 判断 Unique 冲突
+    // 更新数据
+    for (int i = 0; i < (int)ridList.size(); i++) {
+        RID rid;
+        this->systemManager->opDelete(tableName, dataLists[i], updateRidList[i]);
+        for (int j = 0; j < (int)updateDataList.size(); j++) {
+            if (updatePos[j] == 1) {
+                dataLists[i][j] = updateDataList[j];
+            }
+        }
+        if (exeInsert(tableName, dataLists[i], rid) == 0) {
+            updatedRidList.push_back(rid);
+        } else {
+            for (int k = 0; k < (int)updatedRidList.size(); k++) {
+                this->systemManager->opDelete(tableName, dataLists[k], updatedRidList[k]);
+            }
+            for (int k = 0; k < (int)updatedRidList.size(); k++) {
+                this->systemManager->opInsert(tableName, originalDataLists[k]);
+            }
+            return -1;
+        }
+    }
+
+    /*// 判断 Unique 冲突
     for (int i = 0; i < (int)headerList.size(); i++) {
         if (updatePos[i] == true && (headerList[i].isPrimary == true || headerList[i].isUnique == true)) {
             // 多个数据相同，冲突
@@ -304,18 +411,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
                 return -1;
             }
         }
-    }
-
-    // 更新数据
-    for (int i = 0; i < (int)ridList.size(); i++) {
-        this->systemManager->opDelete(tableName, dataLists[i], updateRidList[i]);
-        for (int j = 0; j < (int)updateDataList.size(); j++) {
-            if (updatePos[j] == 1) {
-                dataLists[i][j] = updateDataList[j];
-            }
-        }
-        this->systemManager->opInsert(tableName, dataLists[i]);
-    }
+    }*/
 
     return 0;
 }
@@ -442,4 +538,58 @@ bool QueryManager::foreignKeyExistJudge(TableHeader header, Data data) {
     }
 
     return false;
+}
+
+bool QueryManager::judgeUnique(string tableName, vector <string> judgeHeaderList, vector <Data> judgeDataList) {
+    Table *table = this->systemManager->getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
+    map <int, int> ridMap;
+    for (int i = 0; i < (int)judgeHeaderList.size(); i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (judgeHeaderList[i] == headerList[j].headerName) {
+                VarType indexType = headerList[j].varType == DATE ? INT : (headerList[j].varType == CHAR ? VARCHAR : headerList[j].varType);
+                indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + tableName, headerList[j].headerName, indexType);
+                vector <RID> ridList;
+                if (indexType == INT) {
+                    ridList = indexHandler->getRIDs((char*)&judgeDataList[i].intVal);
+                } else if (indexType == FLOAT) {
+                    ridList = indexHandler->getRIDs((char*)&judgeDataList[i].floatVal);
+                } else {
+                    char str[MAX_RECORD_LEN];
+                    memcpy(str, judgeDataList[i].stringVal.c_str(), judgeDataList[i].stringVal.size());
+                    ridList = indexHandler->getRIDs(str);
+                }
+                indexHandler->closeIndex();
+                for (int k = 0; k < (int)ridList.size(); k++) {
+                    if (ridMap.count(ridList[k].pageID * MAX_RECORD_LEN + ridList[k].slotID) == 0) {
+                        ridMap[ridList[k].pageID * MAX_RECORD_LEN + ridList[k].slotID] = 1;
+                    } else {
+                        ridMap[ridList[k].pageID * MAX_RECORD_LEN + ridList[k].slotID]++;
+                    }
+                    if (ridMap[ridList[k].pageID * MAX_RECORD_LEN + ridList[k].slotID] == (int)judgeHeaderList.size()) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
+
+    /*if ((headerList[j].isPrimary == true || headerList[j].isUnique == true) && dataList[j].isNull == false) {
+            // 检查是否满足 unique 要求
+                
+            for (int j = 0; j < (int)dataLists.size(); j++) {
+                if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataList[i].intVal == dataLists[j][i].intVal && dataLists[j][i].isNull == false) {
+                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
+                    return -1;
+                } else if (headerList[i].varType == FLOAT && dataList[i].floatVal == dataLists[j][i].floatVal && dataLists[j][i].isNull == false) {
+                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
+                    return -1;
+                } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataList[i].stringVal == dataLists[j][i].stringVal && dataLists[j][i].isNull == false) {
+                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
+                    return -1;
+                }
+            }
+        }*/
 }

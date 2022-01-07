@@ -86,7 +86,8 @@ void testSingleTable() {
     // 正确插入带 NULL 的数据
     vecData[1].stringVal = "teacher_", vecData[2].isNull = true;  assert(queryManager->exeInsert("teacher", vecData) == 0);  vecData[1].stringVal = "teacher", vecData[2].isNull = false;
     // 尝试增加 unique 失败
-    assert(systemManager->createUnique("teacher", "id") == -1);
+    vecString[0].clear();  vecString[0].push_back("id");
+    assert(systemManager->createUnique("teacher", vecString[0]) == -1);
     // 读取数据
     vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
     vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
@@ -112,12 +113,28 @@ void testSingleTable() {
     for (int i = 0; i < (int)vecResult.size(); i++) {
         cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
     }
+    // 尝试增加 unique 失败
+    vecString[0].clear();  vecString[0].push_back("id");  vecString[0].push_back("id_");
+    assert(systemManager->createUnique("teacher", vecString[0]) == -1);
     // 尝试增加 unique 成功
-    assert(systemManager->createUnique("teacher", "id") == 0);
+    vecString[0].clear();  vecString[0].push_back("name");  vecString[0].push_back("id");
+    assert(systemManager->createUnique("teacher", vecString[0]) == 0);
     // 插入数据导致非 unique
     assert(queryManager->exeInsert("teacher", vecData) == -1);
     // 正确插入数据
     vecData[0].intVal = 10001;  assert(queryManager->exeInsert("teacher", vecData) == 0);  vecData[0].intVal = 10000;
+    vecData[1].stringVal = "teacher_";  assert(queryManager->exeInsert("teacher", vecData) == 0);  vecData[0].stringVal = "teacher";
+    assert(queryManager->exeInsert("teacher", vecData) == -1);
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
+    vecResult.clear();
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be three lines below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
+    }
     // 移除后读取数据
     vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
     vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
@@ -125,6 +142,8 @@ void testSingleTable() {
     vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
     assert(queryManager->exeDelete("teacher", vecCondition) == 0);
     vecResult.clear();
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
     assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
     cout << "[--check--] There should be nothing below." << endl;
     for (int i = 0; i < (int)vecResult.size(); i++) {
@@ -140,7 +159,81 @@ void testPrimaryAndForeign() {
     data.varType = INT, data.intVal = 0, data.isNull = false;  vecData.push_back(data);
     data.varType = VARCHAR, data.stringVal = "teacher", data.isNull = false;  vecData.push_back(data);
     data.varType = FLOAT, data.floatVal = 0.0, data.isNull = false;  vecData.push_back(data);
-    
+    for (int i = 0; i < 3; i++) {
+        vecData[0].intVal = i;
+        vecData[2].floatVal = i * 1.2;
+        assert(queryManager->exeInsert("teacher", vecData) == 0);
+    }
+    vecData[1].stringVal = "teacher_";
+    for (int i = 0; i < 3; i++) {
+        vecData[0].intVal = i;
+        vecData[2].floatVal = i * 1.2;
+        assert(queryManager->exeInsert("teacher", vecData) == 0);
+    }
+    vecData[0].intVal = 0;  vecData[1].stringVal = "teacher";  vecData[2].floatVal = 0.0;
+    // 表头
+    vecTableHeader.clear();
+    tableHeader.tableName = "course", tableHeader.headerName = "teacher_id", tableHeader.varType = INT, tableHeader.permitNull = false;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "course", tableHeader.headerName = "teacher_name", tableHeader.varType = VARCHAR, tableHeader.len = 10, tableHeader.permitNull = false;  vecTableHeader.push_back(tableHeader);
+    tableHeader.tableName = "course", tableHeader.headerName = "data", tableHeader.varType = FLOAT, tableHeader.permitNull = true;  vecTableHeader.push_back(tableHeader);
+    // 创建表
+    assert(systemManager->createTable("course", vecTableHeader) == 0);
+    for (int i = 0; i < 3; i++) {
+        vecData[0].intVal = i;
+        vecData[2].floatVal = i * 1.5;
+        assert(queryManager->exeInsert("course", vecData) == 0);
+    }
+    vecData[1].stringVal = "teacher__";  vecData[2].floatVal = 2000;  assert(queryManager->exeInsert("course", vecData) == 0);  vecData[1].stringVal = "teacher";
+    // 添加主键
+    vecString[0].clear();
+    vecString[0].push_back("name");  vecString[0].push_back("id");
+    assert(systemManager->createPrimary("teacher", vecString[0]) == 0);
+    // 因类型不符引用失败
+    vecTableHeader.clear();
+    tableHeader.headerName = "teacher_id";  tableHeader.foreignHeaderName = "name";  vecTableHeader.push_back(tableHeader);
+    tableHeader.headerName = "teacher_name";  tableHeader.foreignHeaderName = "id";  vecTableHeader.push_back(tableHeader);
+    assert(systemManager->createForeign("course", "teacher", vecTableHeader) == -1);
+    // 引用不正确的主键
+    vecTableHeader.clear();
+    tableHeader.headerName = "teacher_id";  tableHeader.foreignHeaderName = "id";  vecTableHeader.push_back(tableHeader);
+    tableHeader.headerName = "teacher_name";  tableHeader.foreignHeaderName = "id";  vecTableHeader.push_back(tableHeader);
+    assert(systemManager->createForeign("course", "teacher", vecTableHeader) == -1);
+    // 因列内有非引用的内容而无法引用
+    vecTableHeader.clear();
+    tableHeader.headerName = "teacher_id";  tableHeader.foreignHeaderName = "id";  vecTableHeader.push_back(tableHeader);
+    tableHeader.headerName = "teacher_name";  tableHeader.foreignHeaderName = "name";  vecTableHeader.push_back(tableHeader);
+    assert(systemManager->createForeign("course", "teacher", vecTableHeader) == -1);
+    // 删除非引用内容再次添加外键成功
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, FLOAT, false, false, "course", "", "data", "", "", 0, 1000});
+    assert(queryManager->exeDelete("course", vecCondition) == 0);
+    assert(systemManager->createForeign("course", "teacher", vecTableHeader) == 0);
+    // 加外键后插入数据
+    for (int i = 0; i < 3; i++) {
+        vecData[0].intVal = i;
+        vecData[2].floatVal = 2000 + i * 1.5;
+        assert(queryManager->exeInsert("course", vecData) == 0);
+    }
+    // 双表连接
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("course");  vecString[0].push_back("teacher");  vecString[0].push_back("course");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("teacher_name");  vecString[1].push_back("data");  vecString[1].push_back("data");
+    vecCondition.clear();
+    vecCondition.push_back(Condition{EQUAL, INT, false, true, "teacher", "course", "id", "teacher_id", "", 0, 0});
+    vecCondition.push_back(Condition{EQUAL, CHAR, false, true, "teacher", "course", "name", "teacher_name", "", 0, 0});
+    vecResult.clear();
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be 18 lines below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal<< " " << vecResult[i][3].floatVal << endl;
+    }
+    // 删除未被引用的元素成功
+    // 删除被引用的元素失败
+    // 删除被引用的元素失败
+    // 删除被引用的元素成功
+    // 去除主键失败
+    // 去除外键成功
+    // 去除主键成功
+
     cout << "[-----Test passed-----]" << endl << endl;
 }
 
@@ -154,6 +247,7 @@ int main(){
 
     testDatabaseAndTable();
     testSingleTable();
+    testPrimaryAndForeign();
     
     /*tableHeader.clear();
     tableHeader.push_back(TableHeader{"teacher", "id", "", "", INT, 4, 0, 0, true, false, false, false, false});

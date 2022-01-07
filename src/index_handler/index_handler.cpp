@@ -158,7 +158,7 @@ bool IndexHandler::has(key_ptr key){
 
 int IndexHandler::count(key_ptr key){
     int ret = getCountIn(treeFile->header->rootPageId, key);
-    std::cout << *((int*)key) << " " << ret << std::endl;
+    //std::cout << *((int*)key) << " " << ret << std::endl;
     return ret;
 }
 
