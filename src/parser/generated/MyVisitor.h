@@ -88,8 +88,17 @@ class MyVisitor: public SQLBaseVisitor {
     ifstream inFile(fileID, ios::in);
     string lineStr;
     std::vector<Data> datalist;
+    //int line = 0;
+    //int counter = 0;
     while (getline(inFile, lineStr)){
-      //std::cout << lineStr << std::endl;
+      /*line++;
+      if (counter >= 100) {
+        std::cout << line << std::endl;
+        counter = 0;
+      } else {
+        counter++;
+      }*/
+      //std::cout << "start of line " << line << std::endl;
       datalist.clear();
       istringstream sin(lineStr);
       string field;
@@ -114,7 +123,12 @@ class MyVisitor: public SQLBaseVisitor {
         it++;
         datalist.push_back(dt);
       }
-      qm->exeInsert(tableName.c_str(), datalist); 
+      /*std::cout << "middle of line " << line << std::endl;
+      if(line==1584){
+        std::cout<<"HELLO";
+      }*/
+      sm->opInsert(tableName.c_str(), datalist); 
+      //std::cout << "end of line " << (line++) << std::endl;
     }
     return visitChildren(ctx);
   }

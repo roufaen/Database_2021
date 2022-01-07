@@ -557,6 +557,27 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         }
     }
 
+    /*// 添加主键标记并创建索引
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                headerList[j].isPrimary = true;
+                if (headerList[j].isUnique == false && headerList[j].hasIndex == false) {
+                    opCreateIndex(tableName, headerList[j].headerName);
+                }
+                //headerList[j].id = i;
+            }
+        }
+    }
+    table->writeHeaderList(headerList);*/
+    opCreatePrimary(tableName, headerNameList);
+
+    return 0;
+}
+
+void SystemManager::opCreatePrimary(string tableName, vector <string> headerNameList) {
+    Table *table = getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
     // 添加主键标记并创建索引
     for (int i = 0; i < (int)headerNameList.size(); i++) {
         for (int j = 0; j < (int)headerList.size(); j++) {
@@ -570,8 +591,6 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         }
     }
     table->writeHeaderList(headerList);
-
-    return 0;
 }
 
 int SystemManager::dropPrimary(string tableName, vector <string> headerNameList) {
@@ -1088,6 +1107,9 @@ void SystemManager::opCreateIndex(string tableName, string headerName) {
     VarType type = headerList[idxPos].varType == DATE ? INT : (headerList[idxPos].varType == CHAR ? VARCHAR : headerList[idxPos].varType);
     this->indexHandler->openIndex("index_" + getDbName() + "_" + tableName, headerName, type);
     for (int i = 0; i < (int)ridList.size(); i++) {
+        /*if (i % 10000 == 0) {
+            cout << i << endl;
+        }*/
         vector <Data> dataList = table->exeSelect(ridList[i]);
         if (dataList[idxPos].isNull == false) {
             key_ptr keyPtr;

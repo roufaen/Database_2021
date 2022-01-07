@@ -1,7 +1,7 @@
 # ifndef RECORD_HANDLER_H
 # define RECORD_HANDLER_H
 
-# include "../utils/RID.h"
+# include "../utils/rid.h"
 # include "../utils/file_header.h"
 # include "../utils/pagedef.h"
 # include "../buf_manager/buf_manager.h"

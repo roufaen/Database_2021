@@ -33,6 +33,7 @@ public:
     int createColumn(string tableName, TableHeader header, Data defaultData);
     int dropColumn(string tableName, string headerName);
     int createPrimary(string tableName, vector <string> headerNameList);
+    void opCreatePrimary(string tableName, vector <string> headerNameList); 
     int dropPrimary(string tableName, vector <string> headerNameList);
     int createForeign(string tableName, string foreignTableName, vector <TableHeader> updateHeaderList);
     int dropForeign(string tableName, vector <string> headerNameList);
