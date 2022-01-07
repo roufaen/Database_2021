@@ -3,7 +3,7 @@
 #include "SQLLexer.h"
 #include "antlr4-runtime.h"
 #include "../../query_manager/query_manager.h"
-#include <regex>
+#include <time.h>
 
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
@@ -83,6 +83,12 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<TableHeader> th;
     th.clear();
     sm->getHeaderList(tableName, th);
+    vector<string> vec;
+    vec.clear();
+    for(auto i:th){
+      if(i.isPrimary) vec.push_back(i.headerName);
+    }
+    sm->dropPrimary(tableName,vec);
     std::string fileID = ctx->String()->getText();
     fileID = fileID.substr(1, fileID.length() - 2);
     ifstream inFile(fileID, ios::in);
@@ -115,8 +121,10 @@ class MyVisitor: public SQLBaseVisitor {
         it++;
         datalist.push_back(dt);
       }
-      qm->exeInsert(tableName.c_str(), datalist); 
+      sm->opInsert(tableName.c_str(), datalist); 
     }
+    if(vec.size()) sm->opCreatePrimary(tableName.c_str(),vec);
+    std::cout << "Finish to load the data" << std::endl;
     return visitChildren(ctx);
   }
 
@@ -199,7 +207,7 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitDrop_table(SQLParser::Drop_tableContext *ctx) override {
     if(!ctx->Identifier()) return defaultResult();
-    sm->dropDb(ctx->Identifier()->getText());
+    sm->dropTable(ctx->Identifier()->getText());
     return defaultResult();
   }
 
@@ -328,8 +336,11 @@ class MyVisitor: public SQLBaseVisitor {
       tableNameList.push_back(i->column()->Identifier(0)->getText());
       selectorList.push_back(i->column()->Identifier(1)->getText());
     }
+    time_t first = time(NULL);
     if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
+      time_t second = time(NULL);
       print(tableNameList, selectorList, resData);
+      printf("Get return in %f seconds\n",std::difftime(second,first));
     } else printf("Fail to select the data\n");
     return defaultResult();
   }

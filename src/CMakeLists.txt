@@ -7,7 +7,7 @@ add_subdirectory(system_manager)
 add_subdirectory(parser)
 
 add_definitions(-DDEBUG)
-add_definitions("-Wall -g")
+add_definitions("-Wall -o2")
 
 include_directories(
        ${CMAKE_CURRENT_SOURCE_DIR}/parser/

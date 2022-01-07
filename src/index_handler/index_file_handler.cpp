@@ -45,7 +45,10 @@ void IndexFileHandler::access(int index){
 char* IndexFileHandler::newPage(int &index, bool isOvrflowPage){
     // std::cout << "Apply for a new page" << std::endl;
     header->pageCount++;
-    std::cout << "Apply for a new page" << header->pageCount << std::endl;
+    /*if (header->pageCount == 342) {
+        cout << "Hello World!" << endl;
+    }
+    std::cout << "Apply for a new page" << header->pageCount << std::endl;*/
     char* res = bm->getPage(fileID, header->pageCount, index);
     if(isOvrflowPage)  ((BPlusOverflowPage*)res)->pageId = header->pageCount;
     else ((BPlusNode*)res)->pageId = header->pageCount;

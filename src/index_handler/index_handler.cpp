@@ -266,10 +266,15 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     IndexScan hb = lb;
     hb.nextKey();
     
-    if(lb.available() && compare(type, key, nowdata) != 0) return ret;
+    lb.getKey(nowdata);
+    if(compare(type, key, nowdata) != 0) return ret;
     
+    //std::cout << " " << getTreeFilename() << *((int*)key) << count(key) << std::endl;
+    int accumulate = 0;
     while(lb.available() && !lb.equals(hb)){
+        //if(*((int*)key) == 1) std::cout << "GOT " << (accumulate++) <<std::endl;
         ret.push_back(lb.getValue());
+        lb.revaildate();
         lb.next();
     }
     return ret;
@@ -425,7 +430,7 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
         }
         if(page->recs == maxIndexPerPage) {
             int newIndex;
-            BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex);
+            BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex, true);
             newOP->nodeType = ix::NodeType::OVRFLOW;
             newOP->nextPage = 0;
             newOP->prevPage = page->pageId;

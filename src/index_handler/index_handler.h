@@ -74,9 +74,12 @@ private:
 
 class IndexScan{
 public:
-    IndexScan(IndexHandler *ih):tree(ih){}
+    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){}
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
-    {}
+    {
+        currentNodeId = bn->pageId;
+        currentOverflowPageId = 0;
+    }
 
     void revaildate();
     int getKey(char*);
@@ -93,7 +96,8 @@ private:
     IndexHandler* tree;
     BPlusNode* currentNode;
     BPlusOverflowPage* currentOverflowPage;
-    int nowPageId;
+    int currentNodeId;
+    int currentOverflowPageId;
     int currentKeyPos, currentValuePos, currentCumulation;
 };
 

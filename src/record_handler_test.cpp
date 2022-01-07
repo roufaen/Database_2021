@@ -1,4 +1,4 @@
-# include "utils/RID.h"
+# include "utils/rid.h"
 # include "record_handler/record_handler.h"
 # include "buf_manager/buf_manager.h"
 # include <stdio.h>

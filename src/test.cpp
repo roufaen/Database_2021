@@ -3,7 +3,7 @@
 
 unsigned char MyBitMap::ha[] = {0};
 int main(){
-    system("rm -rf *.dat *.key *.tree");
+    //system("rm -rf *.dat *.key *.tree");
     MyBitMap::initConst();
     BufManager* bm = new BufManager();
     IndexHandler* ih = new IndexHandler(bm);
