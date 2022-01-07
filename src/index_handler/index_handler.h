@@ -78,6 +78,7 @@ public:
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
     {}
 
+    void revaildate();
     int getKey(char*);
     RID getValue();
     void next();
@@ -92,6 +93,7 @@ private:
     IndexHandler* tree;
     BPlusNode* currentNode;
     BPlusOverflowPage* currentOverflowPage;
+    int nowPageId;
     int currentKeyPos, currentValuePos, currentCumulation;
 };
 

@@ -260,11 +260,12 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     ret.clear();
     if(totalCount() == 0) return ret;
     
-    IndexScan lb = lowerBound(key);
+    IndexScan lb = lowerBound(key);  
+    if(!lb.available()) return ret;
+    
     IndexScan hb = lb;
     hb.nextKey();
     
-    lb.getKey(nowdata);
     if(lb.available() && compare(type, key, nowdata) != 0) return ret;
     
     while(lb.available() && !lb.equals(hb)){

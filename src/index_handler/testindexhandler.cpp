@@ -16,11 +16,11 @@ int main(){
     ih->closeIndex();
     ih->openIndex("db","col",INT);
     int index = 588;
-    IndexScan indexScan = ih->lowerBound((char*)&index);
+    IndexScan indexScan = ih->upperBound((char*)&index);
     char* nowdata = new char[MAX_RECORD_LEN];
     while(indexScan.available()){
         indexScan.getKey(nowdata);
-        std::cout<<*((int*)nowdata) << std::endl;
+        std::cout<<*((int*)nowdata) <<"*" << indexScan.getValue().pageID << " " << indexScan.getValue().slotID << std::endl;
         indexScan.next();
     }
     ih->insert((char*)&index, RID{1,1});
