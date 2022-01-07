@@ -66,42 +66,52 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitShow_indexes(SQLParser::Show_indexesContext *ctx) override {
-    //TODO
-    printf("I should show the indexes here, but now no interface\n");
+    std::string tableName = ctx->Identifier()->getText();
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(tableName, th);
+    std::vector<string> vec;
+    for(auto it:th){
+      if(it.isUnique || it.isPrimary || it.hasIndex) vec.push_back(it.tableName+"."+it.headerName);
+    }
+    print("Cols with Index", vec);
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
     std::string tableName = ctx->Identifier()->getText();
-    ifstream inFile(ctx->String()->getText(), ios::in);
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(tableName, th);
+    std::string fileID = ctx->String()->getText();
+    fileID = fileID.substr(1, fileID.length() - 2);
+    ifstream inFile(fileID, ios::in);
     string lineStr;
     std::vector<Data> datalist;
-    datalist.clear();
     while (getline(inFile, lineStr)){
+      //std::cout << lineStr << std::endl;
+      datalist.clear();
       istringstream sin(lineStr);
       string field;
-      std::regex number("^[-+]?[0-9]+$");
-      std::regex date("^[1-9][0-9][0-9][0-9]-[0-9][0-9]-[0-3][0-9]$");
-      std::regex floatNumber("^[-+]?[0-9]+[\.][0-9]+$");
-      std::regex nULL("^NULL$");
+      auto it = th.begin();
       while(getline(sin, field, ',')){
         Data dt = {0,0,0, "",0,false};
-        bool isInt = regex_match(field,number);
-        bool isFloat = regex_match(field, floatNumber);
-        bool isDat = regex_match(field, date);
-        bool isNull = regex_match(field, nULL);
-        if(isNull) dt.isNull = true;
-        else if (isInt){
+        dt.varType = (*it).varType;
+        if(field=="NULL") dt.isNull = true;
+        else if (dt.varType == INT){
           dt.intVal = getValue<int>(field);
           dt.varType = INT;
-        } else if(isFloat){
+        } else if(dt.varType == FLOAT){
           dt.floatVal = getValue<float>(field);
           dt.varType = FLOAT;
-        } else if(isDat && isDate(field, dt.intVal)) dt.varType = DATE;
+        } else if(dt.varType == DATE && isDate(field, dt.intVal)) {
+          dt.varType = DATE;
+        }
         else {
           dt.varType = VARCHAR;
           dt.stringVal = field;
         }
+        it++;
         datalist.push_back(dt);
       }
       qm->exeInsert(tableName.c_str(), datalist); 
@@ -164,7 +174,7 @@ class MyVisitor: public SQLBaseVisitor {
               std::string foreignTable = pointer->Identifier(1)->getText();
               th.headerName = pointer->Identifier(0)->getText();
               th.isForeign = true;
-              th.foreignHeaderName = pointer->Identifier(1)->getText();
+              th.foreignHeaderName = pointer->Identifier(2)->getText();
               tableHeader.push_back(th);
               if (sm->createForeign(tableName,foreignTable, tableHeader)) {
                 sm->dropTable(tableName);

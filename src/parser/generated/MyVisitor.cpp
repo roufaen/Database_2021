@@ -105,7 +105,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     auto t_j = colName.begin();
     vector<int> len;
     while(t_i!=tableName.end() && t_j!=colName.end()){
-        len.push_back((*t_i).length() + (*t_j).length());
+        len.push_back((*t_i).length() + 1 + (*t_j).length());
         t_i++; t_j++;
     }
     for(auto dt:data){
@@ -290,7 +290,6 @@ void print(const string tableName, const vector<string>& data){
         std::cout << "|" << setw(len) << setiosflags(ios::left) << dt;
         std::cout << "|" << std::endl;;
     }
-    std::cout << std::endl;
     std::cout<<"+";
     for(int j=0; j<len; j++)
         std::cout<<"-";

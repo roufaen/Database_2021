@@ -1,4 +1,5 @@
 #include "index_file_handler.h"
+#include <assert.h>
 
 IndexFileHandler::IndexFileHandler(BufManager* _bm){
     bm = _bm;
@@ -44,6 +45,7 @@ void IndexFileHandler::access(int index){
 char* IndexFileHandler::newPage(int &index, bool isOvrflowPage){
     // std::cout << "Apply for a new page" << std::endl;
     header->pageCount++;
+    std::cout << "Apply for a new page" << header->pageCount << std::endl;
     char* res = bm->getPage(fileID, header->pageCount, index);
     if(isOvrflowPage)  ((BPlusOverflowPage*)res)->pageId = header->pageCount;
     else ((BPlusNode*)res)->pageId = header->pageCount;
