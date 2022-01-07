@@ -135,6 +135,22 @@ void testSingleTable() {
     for (int i = 0; i < (int)vecResult.size(); i++) {
         cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
     }
+    // 移除unique标记并插入数据
+    vecString[0].clear();  vecString[0].push_back("name");
+    assert(systemManager->dropUnique("teacher", vecString[0]) == -1);
+    vecString[0].clear();  vecString[0].push_back("name");  vecString[0].push_back("id");
+    assert(systemManager->dropUnique("teacher", vecString[0]) == 0);
+    assert(queryManager->exeInsert("teacher", vecData) == 0);
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
+    vecResult.clear();
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be four lines below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
+    }
     // 移除后读取数据
     vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
     vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
@@ -222,20 +238,72 @@ void testPrimaryAndForeign() {
     vecCondition.push_back(Condition{EQUAL, CHAR, false, true, "teacher", "course", "name", "teacher_name", "", 0, 0});
     vecResult.clear();
     assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
-    cout << "[--check--] There should be 18 lines below." << endl;
+    cout << "[--check--] There should be six lines below." << endl;
     for (int i = 0; i < (int)vecResult.size(); i++) {
         cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal<< " " << vecResult[i][3].floatVal << endl;
     }
     // 删除未被引用的元素成功
+    vecCondition.clear();
+    vecCondition.push_back(Condition{EQUAL, VARCHAR, false, false, "teacher", "", "name", "", "teacher_", 0, 0});
+    assert(queryManager->exeDelete("teacher", vecCondition) == 0);
     // 删除被引用的元素失败
+    vecCondition.clear();
+    vecCondition.push_back(Condition{EQUAL, VARCHAR, false, false, "teacher", "", "name", "", "teacher", 0, 0});
+    assert(queryManager->exeDelete("teacher", vecCondition) == -1);
     // 删除被引用的元素失败
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, FLOAT, false, false, "course", "", "data", "", "", 0, 1000});
+    assert(queryManager->exeDelete("course", vecCondition) == 0);
+    vecCondition.clear();
+    vecCondition.push_back(Condition{EQUAL, VARCHAR, false, false, "teacher", "", "name", "", "teacher", 0, 0});
+    assert(queryManager->exeDelete("teacher", vecCondition) == -1);
     // 删除被引用的元素成功
+    vecCondition.clear();
+    vecCondition.push_back(Condition{LESS_EQUAL, FLOAT, false, false, "course", "", "data", "", "", 0, 1});
+    assert(queryManager->exeDelete("course", vecCondition) == 0);
+    vecCondition.clear();
+    vecCondition.push_back(Condition{LESS_EQUAL, FLOAT, false, false, "teacher", "", "data", "", "", 0, 1});
+    assert(queryManager->exeDelete("teacher", vecCondition) == 0);
     // 去除主键失败
+    vecString[0].clear();
+    vecString[0].push_back("id");  vecString[0].push_back("name");
+    assert(systemManager->dropPrimary("teacher", vecString[0]) == -1);
     // 去除外键成功
+    vecString[0].clear();
+    vecString[0].push_back("teacher_id");  vecString[0].push_back("teacher_name");
+    assert(systemManager->dropForeign("course", vecString[0]) == 0);
+    // 去除外键后删除元素成功
+    vecCondition.clear();
+    vecCondition.push_back(Condition{LESS_EQUAL, FLOAT, false, false, "teacher", "", "data", "", "", 0, 2});
+    assert(queryManager->exeDelete("teacher", vecCondition) == 0);
+    // 去除主键失败
+    vecString[0].clear();
+    vecString[0].push_back("id");  vecString[0].push_back("name");  vecString[0].push_back("data");
+    assert(systemManager->dropPrimary("teacher", vecString[0]) == -1);
     // 去除主键成功
-
+    vecString[0].clear();
+    vecString[0].push_back("name");  vecString[0].push_back("id");
+    assert(systemManager->dropPrimary("teacher", vecString[0]) == 0);
+    // 确认数据无误
+    vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
+    vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
+    vecResult.clear();
+    vecCondition.clear();
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 0, 0});
+    assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
+    cout << "[--check--] There should be one line below." << endl;
+    for (int i = 0; i < (int)vecResult.size(); i++) {
+        cout << vecResult[i][0].intVal << " " << vecResult[i][1].stringVal << " " << vecResult[i][2].floatVal << endl;
+    }
     cout << "[-----Test passed-----]" << endl << endl;
 }
+
+/*Table *table2 = getTable("teacher");
+vector <RID> ridList2 = table2->getRecordList();
+for (int i = 0; i < (int)ridList2.size(); i++) {
+    vector <Data> dataList = table2->exeSelect(ridList2[i]);
+    int a = 1;
+}*/
 
 int main(){
     system("rm -rf *.dat *.key *.tree");

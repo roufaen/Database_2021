@@ -1171,7 +1171,88 @@ void SystemManager::opDelete(string tableName, vector <Data> dataList, RID rid) 
 }
 
 void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <Data> dataList, int delta) {
+    int maxGroup = -1;
     for (int i = 0; i < (int)headerList.size(); i++) {
+        if (headerList[i].isForeign == true) {
+            maxGroup = headerList[i].foreignGroup > maxGroup ? headerList[i].foreignGroup : maxGroup;
+        }
+    }
+    for (int i = 0; i <= maxGroup; i++) {
+        vector <int> refPos;
+        Table *foreignTable;
+        int groupExist = 0;
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerList[j].isForeign == true && headerList[j].foreignGroup == i) {
+                foreignTable = getTable(headerList[j].foreignTableName);
+                groupExist = 1;
+                vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
+                for (int k = 0; k < (int)foreignHeaderList.size(); k++) {
+                    if (headerList[j].foreignHeaderName == foreignHeaderList[k].headerName) {
+                        refPos.push_back(k);
+                        break;
+                    }
+                }
+            } else {
+                refPos.push_back(-1);
+            }
+        }
+        if (groupExist == 1) {
+            vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
+            vector <RID> ridList = foreignTable->getRecordList();
+            for (int j = 0; j < (int)ridList.size(); j++) {
+                int equal = 1;
+                vector <Data> foreignDataList = foreignTable->exeSelect(ridList[j]);
+                for (int k = 0; k < (int)headerList.size(); k++) {
+                    if (headerList[k].isForeign == true && headerList[k].foreignGroup == i) {
+                        if (headerList[k].varType == INT || headerList[k].varType == DATE) {
+                            if (dataList[k].intVal != foreignDataList[refPos[k]].intVal) {
+                                equal = 0;
+                            }
+                        } else if (headerList[k].varType == FLOAT) {
+                            if (dataList[k].floatVal != foreignDataList[refPos[k]].floatVal) {
+                                equal = 0;
+                            }
+                        } else if (headerList[k].varType == CHAR || headerList[k].varType == VARCHAR) {
+                            if (dataList[k].stringVal != foreignDataList[refPos[k]].stringVal) {
+                                equal = 0;
+                            }
+                        }
+                    }
+                }
+                if (equal == 1) {
+                    for (int k = 0; k < (int)refPos.size(); k++) {
+                        if (refPos[k] != -1) {
+                            foreignDataList[refPos[k]].refCount += delta;
+                        }
+                    }
+                    RID foreignNewRid = foreignTable->exeUpdate(foreignDataList, ridList[j]);
+                    for (int k = 0; k < (int)refPos.size(); k++) {
+                        if (refPos[k] != -1) {
+                            if (foreignHeaderList[refPos[k]].isPrimary == true || foreignHeaderList[refPos[k]].isUnique == true || foreignHeaderList[refPos[k]].hasIndex == true) {
+                                VarType type = headerList[k].varType == DATE ? INT : (headerList[k].varType == CHAR ? VARCHAR : headerList[k].varType);
+                                this->indexHandler->openIndex("index_" + this->dbName + "_" + headerList[k].foreignTableName, headerList[k].foreignHeaderName, type);
+                                char str[MAX_RECORD_LEN];
+                                memset(str, 0, sizeof(str));
+                                key_ptr keyPtr;
+                                if (type == INT) {
+                                    keyPtr = (char*)&dataList[k].intVal;
+                                } else if (type == FLOAT) {
+                                    keyPtr = (char*)&dataList[k].floatVal;
+                                } else {
+                                    memcpy(str, dataList[k].stringVal.c_str(), dataList[k].stringVal.size());
+                                    keyPtr = str;
+                                }
+                                this->indexHandler->remove(keyPtr, ridList[j]);
+                                this->indexHandler->insert(keyPtr, foreignNewRid);
+                                this->indexHandler->closeIndex();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /*for (int i = 0; i < (int)headerList.size(); i++) {
         if (headerList[i].isForeign == true && dataList[i].isNull == false) {
             Table *foreignTable = getTable(headerList[i].foreignTableName);
             vector <TableHeader> foreignHeaderList = foreignTable->getHeaderList();
@@ -1211,7 +1292,7 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
                 }
             }
             // 索引中的类型只有 INT FLOAT VARCHAR 三种
-            /*VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
+            VarType type = headerList[i].varType == DATE ? INT : (headerList[i].varType == CHAR ? VARCHAR : headerList[i].varType);
             // 打开索引
             this->indexHandler->openIndex("index_" + this->dbName + "_" + headerList[i].foreignTableName, headerList[i].foreignHeaderName, type);
             vector <RID> rids;
@@ -1248,9 +1329,9 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
             this->indexHandler->remove(keyPtr, rids[0]);
             this->indexHandler->insert(keyPtr, foreignNewRid);
             // 关闭索引
-            this->indexHandler->closeIndex();*/
+            this->indexHandler->closeIndex();
         }
-    }
+    }*/
 }
 
 /*int SystemManager::countKey(string tableName, string headerName, VarType type, int intVal, double floatVal, string stringVal) {
