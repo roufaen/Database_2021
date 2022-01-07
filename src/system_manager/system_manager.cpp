@@ -373,8 +373,13 @@ int SystemManager::createColumn(string tableName, TableHeader header, Data defau
         return -1;
     // 是否类型不符
     } else if (defaultData.varType != header.varType && !((defaultData.varType == CHAR || defaultData.varType == VARCHAR) && (header.varType == CHAR || header.varType == VARCHAR))) {
-        cerr << "Default data type error. Operation failed." << endl;
-        return -1;
+        if (defaultData.varType == INT && header.varType == FLOAT) {
+            defaultData.varType = FLOAT;
+            defaultData.floatVal = defaultData.intVal;
+        } else {
+            cerr << "Default data type error. Operation failed." << endl;
+            return -1;
+        }
     // 字符串长度是否非法
     } else if ((header.varType == CHAR || header.varType == VARCHAR) && (int)defaultData.stringVal.size() > header.len) {
         cerr << "String \"" << defaultData.stringVal << "\" too long. Operation failed." << endl;
@@ -495,6 +500,7 @@ int SystemManager::dropColumn(string tableName, string headerName) {
         dataList.erase(dataList.begin() + idxPos);
         dataLists.push_back(dataList);
     }
+    headerList = table->getHeaderList();
     headerList.erase(headerList.begin() + idxPos);
     table->writeHeaderList(headerList);
     for (int i = 0; i < (int)dataLists.size(); i++) {
@@ -974,9 +980,9 @@ int SystemManager::dropUnique(string tableName, vector <string> headerNameList) 
             if (headerNameList[i] == headerList[j].headerName) {
                 headerList[j].isUnique = false;
                 headerList[j].uniqueGroup = -1;
-            }
-            if (headerList[j].isPrimary == false && headerList[j].hasIndex == false) {
-                opDropIndex(tableName, headerList[j].headerName);
+                if (headerList[j].isPrimary == false && headerList[j].hasIndex == false) {
+                    opDropIndex(tableName, headerList[j].headerName);
+                }
             }
         }
     }
