@@ -74,7 +74,7 @@ private:
 
 class IndexScan{
 public:
-    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){}
+    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){currentNode = nullptr;}
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
     {
         currentNodeId = bn->pageId;
@@ -87,6 +87,7 @@ public:
     void next();
     void previous();
     void setToBegin();
+    void setToEnd();
     bool equals(const IndexScan &other);
     inline bool available(){return currentNode != nullptr;}
     void nextKey();

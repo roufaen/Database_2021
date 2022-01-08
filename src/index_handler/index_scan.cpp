@@ -121,6 +121,16 @@ void IndexScan::setToBegin(){
     currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
 }
 
+void IndexScan::setToEnd(){
+    currentKeyPos = currentNode->recs - 1;
+    currentValuePos = 0;
+    currentCumulation = 0;
+    currentOverflowPage = nullptr;
+    int index; //index is useless
+    currentNodeId = tree->treeFile->header->lastLeaf;
+    currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+}
+
 bool IndexScan::equals(const IndexScan& that){
     if(!available()) return false;
     return ((currentKeyPos == that.currentKeyPos) && (currentValuePos == that.currentValuePos) && (currentNode == that.currentNode));

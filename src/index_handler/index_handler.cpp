@@ -195,14 +195,10 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
 IndexScan IndexHandler::lesserBound(key_ptr key){ //Strictly small
     if(totalCount() == 0) return IndexScan(this);
     IndexScan it = lowerBound(key);
-    it.getKey(nowdata);
-    std::cout << *(int*)nowdata << std::endl; 
     if(it.available()) {
         it.getKey(nowdata);
         if(compare(type, key, nowdata) == 0) it.previousKey();
     }
-    it.getKey(nowdata);
-    std::cout << *(int*)nowdata << std::endl; 
     return it;
 }
 
