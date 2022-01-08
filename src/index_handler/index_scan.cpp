@@ -11,7 +11,7 @@ int IndexScan::getKey(char* key){
 void IndexScan::revaildate(){
     int index; //index is useless
     if(currentNodeId>0) currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
-    if(currentOverflowPageId>0) 
+    if(currentOverflowPageId>0 && currentOverflowPage!=nullptr) 
         currentOverflowPage = (BPlusOverflowPage*)tree->treeFile->getPage(currentOverflowPageId, index);
 }
 
@@ -22,9 +22,8 @@ RID IndexScan::getValue(){
     // getKey(nowdata);
     // std::cout << currentNodeId << "GETVALUE" << *((int*)nowdata) << std::endl;
     if(currentNode->data[currentKeyPos].count == 1) return currentNode->data[currentKeyPos].value;
-    if(currentValuePos == 0 || currentOverflowPage == nullptr) {
+    if(currentOverflowPage == nullptr) {
         currentCumulation = 0;
-        // std::cout << "Enter #1 " << currentNode->data[currentKeyPos].value.pageID <<  std::endl;
         int index; //index is useless
         currentOverflowPageId = currentNode->data[currentKeyPos].value.pageID;
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPageId, index);
@@ -93,7 +92,8 @@ void IndexScan::previousKey(){
     currentOverflowPage = nullptr;
     if(currentKeyPos){
         currentKeyPos--;
-        currentValuePos = 0;
+        revaildate();
+        currentValuePos = currentNode->data[currentKeyPos].count - 1;
     }else{
         int prevPage = currentNode -> prevPage;
         //std::cout << "Prevpage is " << prevPage << " " << tree->treeFile->header->firstLeaf << std::endl;
@@ -105,9 +105,9 @@ void IndexScan::previousKey(){
         }else {
             int index; //index is useless
             currentNodeId = prevPage;
-            this->currentNode = (BPlusNode*) tree->treeFile->getPage(prevPage, index);
+            currentNode = (BPlusNode*) tree->treeFile->getPage(prevPage, index);
             currentKeyPos = currentNode->recs - 1;
-            currentValuePos = 0;
+            currentValuePos = currentNode->data[currentKeyPos].count - 1;
         }
     }
 }
@@ -116,6 +116,7 @@ void IndexScan::setToBegin(){
     currentKeyPos = 0;
     currentValuePos = 0;
     currentCumulation = 0;
+    currentOverflowPageId = 0;
     currentOverflowPage = nullptr;
     int index; //index is useless
     currentNodeId = tree->treeFile->header->firstLeaf;
@@ -123,13 +124,14 @@ void IndexScan::setToBegin(){
 }
 
 void IndexScan::setToEnd(){
-    currentValuePos = 0;
     currentCumulation = 0;
+    currentOverflowPageId = 0;
     currentOverflowPage = nullptr;
     int index; //index is useless
     currentNodeId = tree->treeFile->header->lastLeaf;
     currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
     currentKeyPos = currentNode->recs - 1;
+    currentValuePos = currentNode->data[currentKeyPos].count - 1;
 }
 
 bool IndexScan::equals(const IndexScan& that){

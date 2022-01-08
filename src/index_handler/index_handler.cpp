@@ -186,7 +186,7 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
     IndexScan it = lowerBound(key);
     if(it.available()) {
         it.getKey(nowdata);
-        // std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
+        std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
         if(compare(type, key, nowdata) == 1) it.nextKey();
     }
     else it.setToBegin();
