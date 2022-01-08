@@ -401,7 +401,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     }
 
     // 更新数据
-    for (int i = 0; i < (int)ridList.size(); i++) {
+    for (int i = 0; i < (int)updateRidList.size(); i++) {
         RID rid;
         this->systemManager->opDelete(tableName, dataLists[i], updateRidList[i]);
         for (int j = 0; j < (int)updateDataList.size(); j++) {
@@ -481,23 +481,23 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
 bool QueryManager::compare(int lInt, double lFloat, string lString, int rInt, double rFloat, string rString, ConditionType cond) {
     bool intEqual = (lInt == rInt), floatEqual = (lFloat == rFloat), stringEqual = (lString == rString);
     bool intNotEqual = (lInt != rInt), floatNotEqual = (lFloat != rFloat), stringNotEqual = (lString != rString);
-    bool intLess = (lInt < rInt), floatLess = (lFloat < rFloat);
-    bool intLessEqual = (lInt <= rInt), floatLessEqual = (lFloat <= rFloat);
-    bool intGreater = (lInt > rInt), floatGreater = (lFloat > rFloat);
-    bool intGreaterEqual = (lInt >= rInt), floatGreaterEqual = (lFloat >= rFloat);
+    bool intLess = (lInt < rInt), floatLess = (lFloat < rFloat), stringLess = (lString < rString);
+    bool intLessEqual = (lInt <= rInt), floatLessEqual = (lFloat <= rFloat), stringLessEqual = (lString <= rString);
+    bool intGreater = (lInt > rInt), floatGreater = (lFloat > rFloat), stringGreater = (lString > rString);
+    bool intGreaterEqual = (lInt >= rInt), floatGreaterEqual = (lFloat >= rFloat), stringGreaterEqual = (lString >= rString);
     // 对其中一种数据类型判断时，输入的其余数据均相等
     if (cond == EQUAL) {
         return intEqual && floatEqual && stringEqual;
     } else if (cond == NOT_EQUAL) {
         return intNotEqual || floatNotEqual || stringNotEqual;
     } else if (cond == LESS) {
-        return intLess || floatLess;
+        return intLess || floatLess || stringLess;
     } else if (cond == LESS_EQUAL) {
-        return intLessEqual && floatLessEqual;
+        return intLessEqual && floatLessEqual && stringLessEqual;
     } else if (cond == GREATER) {
-        return intGreater || floatGreater;
+        return intGreater || floatGreater || stringGreater;
     } else if (cond == GREATER_EQUAL) {
-        return intGreaterEqual && floatGreaterEqual;
+        return intGreaterEqual && floatGreaterEqual && stringGreaterEqual;
     }
     return false;
 }

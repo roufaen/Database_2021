@@ -7,15 +7,14 @@
 using namespace std;
 unsigned char MyBitMap::ha[] = {0};
 int main() {
-    system("rm -rf *.dat");
+    //system("rm -rf *.dat");
     MyBitMap::initConst();
     char *dat = new char[2048];
     memset(dat, 0, sizeof(2048));
     BufManager *bufManager = new BufManager();
     RecordHandler *recordHandler = new RecordHandler(bufManager);
-    recordHandler->createFile("file.dat");
-    recordHandler->openFile("file.dat");
-    RID rid1 = recordHandler->insertRecord("test record1");
+    recordHandler->openFile("table_DATASET_PARTSUPP.dat");
+    /*RID rid1 = recordHandler->insertRecord("test record1");
     RID rid2 = recordHandler->insertRecord("test record2");
     recordHandler->getRecord(rid1, dat);
     printf("%s\n", dat);
@@ -26,7 +25,7 @@ int main() {
     recordHandler->getRecord(rid1, dat);
     printf("%s\n", dat);
     recordHandler->getRecord(rid2, dat);
-    printf("%s\n", dat);
+    printf("%s\n", dat);*/
     /*RID rid[20];
     BufManager *bufManager = new BufManager();
     RecordHandler *recordHandler = new RecordHandler(bufManager);
