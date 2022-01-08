@@ -77,16 +77,18 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                                 tmpRids = this->indexHandler->getRIDs(key);
                             } else {
                                 if (conditionList[j].condType == LESS_EQUAL) {
-                                    IndexScan indexScanner = this->indexHandler->lowerBound(key);
+                                    IndexScan indexScanner = this->indexHandler->greaterBound(key);
+                                    indexScanner.previous();
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.next();
+                                        indexScanner.previous();
                                     }
                                 } else if (conditionList[j].condType == LESS) {
-                                    IndexScan indexScanner = this->indexHandler->lesserBound(key);
+                                    IndexScan indexScanner = this->indexHandler->lowerBound(key);
+                                    indexScanner.previous();
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.next();
+                                        indexScanner.previous();
                                     }
                                 } else if (conditionList[j].condType == GREATER_EQUAL) {
                                     IndexScan indexScanner = this->indexHandler->upperBound(key);
@@ -98,6 +100,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                                     IndexScan indexScanner = this->indexHandler->greaterBound(key);
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
+                                        // std::cout << "NEXT" << std::endl;
                                         indexScanner.next();
                                     }
                                 }

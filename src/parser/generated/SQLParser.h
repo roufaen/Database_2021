@@ -21,9 +21,9 @@ public:
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
     T__44 = 45, T__45 = 46, T__46 = 47, T__47 = 48, T__48 = 49, T__49 = 50, 
     T__50 = 51, EqualOrAssign = 52, Less = 53, LessEqual = 54, Greater = 55, 
-    GreaterEqual = 56, NotEqual = 57, Count = 58, Average = 59, Max = 60, 
-    Min = 61, Sum = 62, Null = 63, Identifier = 64, Integer = 65, Date = 66, 
-    String = 67, Float = 68, Whitespace = 69, Annotation = 70
+    GreaterEqual = 56, NotEqual = 57, Is = 58, Count = 59, Average = 60, 
+    Max = 61, Min = 62, Sum = 63, Null = 64, Identifier = 65, Integer = 66, 
+    Date = 67, String = 68, Float = 69, Whitespace = 70, Annotation = 71
   };
 
   enum {
@@ -673,6 +673,7 @@ public:
     antlr4::tree::TerminalNode *Greater();
     antlr4::tree::TerminalNode *GreaterEqual();
     antlr4::tree::TerminalNode *NotEqual();
+    antlr4::tree::TerminalNode *Is();
 
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;

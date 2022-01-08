@@ -24,6 +24,7 @@ class MyVisitor: public SQLBaseVisitor {
       IndexHandler* ih;
       SystemManager* sm;
       std::vector<Condition> conditionList;
+      bool alwaysFalse;
 
     public:
   MyVisitor(QueryManager* _qm, IndexHandler* _ih, SystemManager* _sm){
@@ -200,8 +201,8 @@ class MyVisitor: public SQLBaseVisitor {
     }
     if(!isCreated) {
       if(sm->createTable(tableName, tableHeader)) return defaultResult();
-      printf("Successfully create the new table\n");
     }
+    printf("Successfully create the new table\n");
     return defaultResult();
   }
 
@@ -291,6 +292,10 @@ class MyVisitor: public SQLBaseVisitor {
     if(!(ctx->Identifier() && ctx->where_and_clause())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     visitWhere_and_clause(ctx->where_and_clause());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
+    }
     if(conditionList.size()) qm->exeDelete(tableName.c_str(), conditionList);
     else cerr << "The condition fails\n";
     return defaultResult();
@@ -302,6 +307,10 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<std::string> headerList;
     std::vector<Data> dataList;
     visitWhere_and_clause(ctx->where_and_clause());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
+    }
     SQLParser::Set_clauseContext* sc = ctx->set_clause();
     auto sc_eq = sc->EqualOrAssign();
     int size = sc_eq.size();
@@ -327,6 +336,10 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<std::string> tableNameList;
     std::vector<std::string> selectorList;
     visitWhere_and_clause(ctx->where_and_clause());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
+    }
     tableNameList.clear();
     //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
     //NO GROUPED SEARCH SUPPORTED
@@ -478,6 +491,7 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override{
     conditionList.clear();
+    alwaysFalse = false;
     if(ctx==nullptr) return defaultResult();
     std::vector<SQLParser::Where_clauseContext *> wax = ctx->where_clause();
     for(auto i:wax){
@@ -502,6 +516,8 @@ class MyVisitor: public SQLBaseVisitor {
         cond.rightNull = dt.isNull;
         cond.rightType = dt.varType;
         cond.useColumn = false;
+        if(cond.rightNull == true && cond.condType == ConditionType::EQUAL) alwaysFalse = true;
+          else if (cond.condType == ConditionType::IN) cond.condType = ConditionType::EQUAL;
       } else if (ec->column() != nullptr) {
         cond.rightTableName = ec->column()->Identifier(0)->getText();
         cond.rightCol = ec->column()->Identifier(1)->getText();

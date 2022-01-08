@@ -16,8 +16,11 @@ void IndexScan::revaildate(){
 }
 
 RID IndexScan::getValue(){
+    revaildate();
+    // char* nowdata = new char[MAX_RECORD_LEN];
+    // getKey(nowdata);
+    // std::cout << currentNodeId << "GETVALUE" << *((int*)nowdata) << std::endl;
     if(currentNode->data[currentKeyPos].count == 1) return currentNode->data[currentKeyPos].value;
-    // std::cout << "Enter #0 " << currentValuePos << " " << currentNode->data[currentKeyPos].count << std::endl;
     if(currentValuePos == 0 || currentOverflowPage == nullptr) {
         currentCumulation = 0;
         // std::cout << "Enter #1 " << currentNode->data[currentKeyPos].value.pageID <<  std::endl;
@@ -27,8 +30,10 @@ RID IndexScan::getValue(){
     }
     while(currentCumulation + currentOverflowPage->recs <= currentValuePos){
         currentCumulation += currentOverflowPage->recs;
-        if(currentOverflowPage->recs == 0) cout << "Enter #2 " << currentCumulation << " " << currentOverflowPage->recs << std::endl;
-        if(currentOverflowPage->recs == 0) exit(-1);
+        if(currentOverflowPage->recs == 0) {
+            cout << "Enter #2 " << currentOverflowPageId << " " << currentOverflowPage->recs << std::endl;
+            exit(-1);
+        }
         int index;//index is useless
         currentOverflowPageId = currentOverflowPage->nextPage;
         currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPageId, index);
@@ -61,7 +66,7 @@ void IndexScan::nextKey(){
         currentValuePos = 0;
     }else{
         int nextPage = currentNode -> nextPage;
-        if(nextPage <= 0) {
+        if(currentNodeId == tree->treeFile->header->lastLeaf) {
             currentNode = nullptr;
             currentNodeId = 0;
             currentKeyPos = 0;
@@ -90,7 +95,8 @@ void IndexScan::previousKey(){
         currentValuePos = 0;
     }else{
         int prevPage = currentNode -> prevPage;
-        if(prevPage <= 0) {
+        //std::cout << "Prevpage is " << prevPage << " " << tree->treeFile->header->firstLeaf << std::endl;
+        if(currentNodeId == tree->treeFile->header->firstLeaf) {
             currentNode = nullptr;
             currentNodeId = -1;
             currentKeyPos = 0;

@@ -33,6 +33,7 @@ ConditionType getCondType(SQLParser::OperateContext* oc){
     if(oc->LessEqual()) return ConditionType::LESS_EQUAL;
     if(oc->Greater()) return ConditionType::GREATER;
     if(oc->GreaterEqual()) return ConditionType::GREATER_EQUAL;
+    if(oc->Is()) return ConditionType::IN; //In means is now
     return ConditionType::IN;
 }
 

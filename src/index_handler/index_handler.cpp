@@ -2,9 +2,9 @@
 
 int getLen(key_ptr key, VarType _type){
     switch (_type){
-        case FLOAT: return 4;
-        case INT: return 4;
-        case VARCHAR: return strlen(key);
+        case FLOAT: return sizeof(double);
+        case INT: return sizeof(int);
+        case VARCHAR: return strlen(key)*sizeof(char);
         default: return 0;
     }
 }
@@ -195,21 +195,21 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
 IndexScan IndexHandler::lesserBound(key_ptr key){ //Strictly small
     if(totalCount() == 0) return IndexScan(this);
     IndexScan it = lowerBound(key);
+    it.getKey(nowdata);
+    std::cout << *(int*)nowdata << std::endl; 
     if(it.available()) {
         it.getKey(nowdata);
         if(compare(type, key, nowdata) == 0) it.previousKey();
     }
-    else it.setToBegin();
+    it.getKey(nowdata);
+    std::cout << *(int*)nowdata << std::endl; 
     return it;
 }
 
 IndexScan IndexHandler::greaterBound(key_ptr key){ //Strictly big
     if(totalCount() == 0) return IndexScan(this);
-    IndexScan it = upperBound(key);
-    if(it.available()) {
-        it.getKey(nowdata);
-        if(compare(type, key, nowdata) == 0) it.nextKey();
-    }
+    IndexScan it = lowerBound(key);
+    if(it.available()) it.nextKey();
     else it.setToBegin();
     return it;
 }
