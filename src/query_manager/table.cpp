@@ -13,8 +13,13 @@ Table::Table(string dbName, string tableName, BufManager *bufManager, vector <Ta
     this->dbName = dbName, this->tableName = tableName;
     // create file
     string fileName = "table_" + dbName + "_" + tableName + ".dat";
+    int len = 0;
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        // 需要保存 size 和 refCount
+        len += headerList[i].len + 8;
+    }
     this->recordHandler = new RecordHandler(bufManager);
-    this->recordHandler->createFile(fileName);
+    this->recordHandler->createFile(fileName, len);
     this->recordHandler->openFile(fileName);
     writeHeaderList(headerList);
     this->headerList = headerList;
