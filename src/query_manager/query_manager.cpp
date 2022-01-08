@@ -188,7 +188,7 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) 
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
-        } else if (dataList[i].varType != headerList[i].varType && !((dataList[i].varType == CHAR || dataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
+        } else if (dataList[i].isNull == false && dataList[i].varType != headerList[i].varType && !((dataList[i].varType == CHAR || dataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
             if (dataList[i].varType == INT && headerList[i].varType == FLOAT) {
                 dataList[i].varType = FLOAT;
                 dataList[i].floatVal = dataList[i].intVal;
@@ -368,7 +368,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
-        } else if (updatePos[i] == 1 && updateDataList[i].varType != headerList[i].varType && !((updateDataList[i].varType == CHAR || updateDataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
+        } else if (updateDataList[i].isNull == false && updatePos[i] == 1 && updateDataList[i].varType != headerList[i].varType && !((updateDataList[i].varType == CHAR || updateDataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
             if (updateDataList[i].varType == INT && headerList[i].varType == FLOAT) {
                 updateDataList[i].varType = FLOAT;
                 updateDataList[i].floatVal = updateDataList[i].intVal;

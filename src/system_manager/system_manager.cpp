@@ -372,7 +372,7 @@ int SystemManager::createColumn(string tableName, TableHeader header, Data defau
         cerr << "Column " << header.headerName << " doesn't permit NULL, but default data is NULL. Operation failed." << endl;
         return -1;
     // 是否类型不符
-    } else if (defaultData.varType != header.varType && !((defaultData.varType == CHAR || defaultData.varType == VARCHAR) && (header.varType == CHAR || header.varType == VARCHAR))) {
+    } else if (defaultData.isNull == false && defaultData.varType != header.varType && !((defaultData.varType == CHAR || defaultData.varType == VARCHAR) && (header.varType == CHAR || header.varType == VARCHAR))) {
         if (defaultData.varType == INT && header.varType == FLOAT) {
             defaultData.varType = FLOAT;
             defaultData.floatVal = defaultData.intVal;
