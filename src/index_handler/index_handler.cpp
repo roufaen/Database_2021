@@ -11,7 +11,7 @@ int getLen(key_ptr key, VarType _type){
 int compare(VarType _type, key_ptr a, char* b){
     switch (_type) {
         case FLOAT: {
-            float diff = (*(float*)a - *(float*) b);
+            double diff = (*(double*)a - *(double*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
         case INT: {
