@@ -78,14 +78,18 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                             } else {
                                 if (conditionList[j].condType == LESS_EQUAL) {
                                     IndexScan indexScanner = this->indexHandler->greaterBound(key);
-                                    indexScanner.previous();
+                                    if(indexScanner.available()) indexScanner.previous();
+                                        else indexScanner.setToEnd();
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
                                         indexScanner.previous();
                                     }
                                 } else if (conditionList[j].condType == LESS) {
-                                    IndexScan indexScanner = this->indexHandler->lowerBound(key);
-                                    indexScanner.previous();
+                                    IndexScan indexScanner = this->indexHandler->upperBound(key);
+                                    if(indexScanner.available()) indexScanner.previous();
+                                        else {
+                                            indexScanner.setToEnd();
+                                        }
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
                                         indexScanner.previous();

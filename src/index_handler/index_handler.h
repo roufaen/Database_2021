@@ -89,7 +89,7 @@ public:
     void setToBegin();
     void setToEnd();
     bool equals(const IndexScan &other);
-    inline bool available(){return currentNode != nullptr;}
+    inline bool available(){return currentNodeId>0;}
     void nextKey();
     void previousKey();
 

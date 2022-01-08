@@ -10,12 +10,13 @@ int IndexScan::getKey(char* key){
 
 void IndexScan::revaildate(){
     int index; //index is useless
-    currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
-    if(currentOverflowPageId) 
+    if(currentNodeId>0) currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+    if(currentOverflowPageId>0) 
         currentOverflowPage = (BPlusOverflowPage*)tree->treeFile->getPage(currentOverflowPageId, index);
 }
 
 RID IndexScan::getValue(){
+    if (currentNodeId<=0) return RID{0,0};
     revaildate();
     // char* nowdata = new char[MAX_RECORD_LEN];
     // getKey(nowdata);
@@ -68,7 +69,7 @@ void IndexScan::nextKey(){
         int nextPage = currentNode -> nextPage;
         if(currentNodeId == tree->treeFile->header->lastLeaf) {
             currentNode = nullptr;
-            currentNodeId = 0;
+            currentNodeId = -1;
             currentKeyPos = 0;
             currentValuePos = 0;
         }else {
@@ -122,13 +123,13 @@ void IndexScan::setToBegin(){
 }
 
 void IndexScan::setToEnd(){
-    currentKeyPos = currentNode->recs - 1;
     currentValuePos = 0;
     currentCumulation = 0;
     currentOverflowPage = nullptr;
     int index; //index is useless
     currentNodeId = tree->treeFile->header->lastLeaf;
     currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+    currentKeyPos = currentNode->recs - 1;
 }
 
 bool IndexScan::equals(const IndexScan& that){

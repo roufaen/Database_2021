@@ -186,7 +186,8 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
     IndexScan it = lowerBound(key);
     if(it.available()) {
         it.getKey(nowdata);
-        if(compare(type, key, nowdata) == -1) it.nextKey();
+        // std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
+        if(compare(type, key, nowdata) == 1) it.nextKey();
     }
     else it.setToBegin();
     return it;
@@ -266,7 +267,6 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     if(compare(type, key, nowdata) != 0) return ret;
     
     //std::cout << " " << getTreeFilename() << *((int*)key) << count(key) << std::endl;
-    int accumulate = 0;
     while(lb.available() && !lb.equals(hb)){
         //if(*((int*)key) == 1) std::cout << "GOT " << (accumulate++) <<std::endl;
         ret.push_back(lb.getValue());
