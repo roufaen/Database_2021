@@ -54,10 +54,10 @@ int RecordHandler::openFile(string fileName) {
             availablePage.pop();
         }
         for (int i = 1; i <= this->header.pageNum; i++) {
-            cout << i << endl;
+            /*cout << i << endl;
             if (i == 60083) {
                 cout << i;
-            }
+            }*/
             BufType page = this->bufManager->getPage(this->fileID, i, idx);
             this->bufManager->access(idx);
             int occupiedNum = 0;
