@@ -59,7 +59,7 @@ int RecordHandler::openFile(string fileName) {
                 cout << i;
             }
             BufType page = this->bufManager->getPage(this->fileID, i, idx);
-            this->bufManager->access(i);
+            this->bufManager->access(idx);
             int occupiedNum = 0;
             memcpy(&occupiedNum, page + PAGE_SIZE - 4, 4);
             if (occupiedNum != this->header.recordPerPage) {
