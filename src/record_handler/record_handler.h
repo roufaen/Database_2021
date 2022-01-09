@@ -15,7 +15,7 @@ class RecordHandler {
 public:
     RecordHandler(BufManager *bufManager);
     ~RecordHandler();
-    int createFile(string fileName);                                                  // 创建文件
+    int createFile(string fileName, int len);                                         // 创建文件
     int destroyFile(string fileName);                                                 // 删除文件
     int openFile(string fileName);                                                    // 通过缓存管理模块打开文件，并获取其句柄
     int closeFile();                                                                  // 关闭fileID对应文件

@@ -7,7 +7,7 @@ RecordHandler::RecordHandler(BufManager *_bufManager) : bufManager(_bufManager) 
 RecordHandler::~RecordHandler() {
 }
 
-int RecordHandler::createFile(string fileName) {
+int RecordHandler::createFile(string fileName, int len) {
     if (this->fileID != -1) {
         return -1;
     } else {
@@ -19,10 +19,10 @@ int RecordHandler::createFile(string fileName) {
         FileHeader newHeader;
         newHeader.pageNum = 0;
         newHeader.recordNum = 0;
-        newHeader.recordPerPage = 3;
+        newHeader.recordPerPage = ((PAGE_SIZE - 4) * 8) / (len * 8 + 1);
         newHeader.recordNumPageOffset = PAGE_SIZE - 4;
-        newHeader.recordSize = MAX_RECORD_LEN;
-        newHeader.slotMapOffset = MAX_RECORD_LEN * 3;
+        newHeader.recordSize = len;
+        newHeader.slotMapOffset = newHeader.recordPerPage * len;
         newHeader.slotMapSize = ceil(newHeader.recordPerPage / 8.0);
         memcpy(page, &newHeader, sizeof(newHeader));
         this->bufManager->closeFile(newFileID);
@@ -54,10 +54,10 @@ int RecordHandler::openFile(string fileName) {
             availablePage.pop();
         }
         for (int i = 1; i <= this->header.pageNum; i++) {
-            cout << i << endl;
+            /*cout << i << endl;
             if (i == 60083) {
                 cout << i;
-            }
+            }*/
             BufType page = this->bufManager->getPage(this->fileID, i, idx);
             this->bufManager->access(idx);
             int occupiedNum = 0;
@@ -159,7 +159,7 @@ RID RecordHandler::insertRecord(const char *pData, int len) {
                 for (int j = 0; j < 8; j++) {
                     if ((page[this->header.slotMapOffset + i] & (1 << j)) == 0) {
                         page[this->header.slotMapOffset + i] |= (1 << j);
-                        memcpy(page + (i * 8 + j) * this->header.recordSize, pData, MAX_RECORD_LEN);
+                        memcpy(page + (i * 8 + j) * this->header.recordSize, pData, this->header.recordSize);
                         int recordNumPage = 0;
                         memcpy(&recordNumPage, page + this->header.recordNumPageOffset, sizeof(int));
                         recordNumPage++;
