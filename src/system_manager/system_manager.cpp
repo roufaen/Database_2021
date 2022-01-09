@@ -1212,7 +1212,7 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
     }
     for (int i = 0; i <= maxGroup; i++) {
         vector <int> refPos;
-        Table *foreignTable;
+        Table *foreignTable = NULL;
         int groupExist = 0;
         for (int j = 0; j < (int)headerList.size(); j++) {
             if (headerList[j].isForeign == true && headerList[j].foreignGroup == i) {
