@@ -62,13 +62,13 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                             key_ptr key;
                             char str[MAX_RECORD_LEN];
                             if ((conditionList[j].rightType == INT && originalHeaderList[k].varType == INT) || (conditionList[j].rightType == DATE && originalHeaderList[k].varType == DATE)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, INT);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, INT);
                                 key = (char*)&conditionList[j].rightIntVal;
                             } else if (conditionList[j].rightType == FLOAT && originalHeaderList[k].varType == FLOAT) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, FLOAT);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, FLOAT);
                                 key = (char*)&conditionList[j].rightFloatVal;
                             } else if ((conditionList[j].rightType == CHAR || conditionList[j].rightType == VARCHAR) && (originalHeaderList[k].varType == CHAR || originalHeaderList[k].varType == VARCHAR)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, VARCHAR);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, VARCHAR);
                                 memcpy(str, conditionList[j].rightStringVal.c_str(), conditionList[j].rightStringVal.size());
                                 key = str;
                             }
