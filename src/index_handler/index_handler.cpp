@@ -41,7 +41,7 @@ void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarTy
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
     if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
-        keyFile->createFile(keyFileName, getLen(nowdata, _type, 200));
+        keyFile->createFile(keyFileName, getLen(nowdata, _type));
         keyFile->openFile(keyFileName);
     }
     treeFile->openFile(treeFileName.c_str());
@@ -420,11 +420,11 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
     } else {
         int pageIndex;
         BPlusOverflowPage* page = (BPlusOverflowPage*)treeFile->getPage(fa->data[index].value.pageID, pageIndex);
-        while((page->nextPage) && (page->recs == maxIndexPerPage)) //TO BE FIEXED maxKeyperOverflowPage
+        while((page->nextPage) && (page->recs == maxIndexPerOVP)) //TO BE FIEXED maxKeyperOverflowPage
         {
             page = (BPlusOverflowPage*)treeFile->getPage(page->nextPage, pageIndex);
         }
-        if(page->recs == maxIndexPerPage) {
+        if(page->recs == maxIndexPerOVP) {
             int newIndex;
             BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex, true);
             newOP->nodeType = ix::NodeType::OVRFLOW;
