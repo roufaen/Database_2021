@@ -113,7 +113,7 @@ class MyVisitor: public SQLBaseVisitor {
           dt.floatVal = getValue<float>(field);
           dt.varType = FLOAT;
         } else if(dt.varType == DATE) {
-          field = "'" + field + "'";
+          field =  field;
           isDate(field, dt.intVal);
           dt.varType = DATE;
         }
@@ -406,15 +406,14 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
-    if(ctx->Identifier()) {
-      return defaultResult();
-    }
-    auto id = ctx->identifiers()->Identifier();
     std::vector<std::string> identifiers;
     identifiers.clear();
-    for(int i=1; i<id.size(); i++)
-      identifiers.push_back(id[i]->getText());
-    sm->dropPrimary(id[0]->getText(), identifiers);
+    if(ctx->identifiers()){
+      auto id = ctx->identifiers()->Identifier();
+      for(int i=0; i<id.size(); i++)
+        identifiers.push_back(id[i]->getText());
+    }
+    sm->dropPrimary(ctx->Identifier()->getText(), identifiers);
     return defaultResult();
   }
 

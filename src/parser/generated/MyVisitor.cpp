@@ -177,7 +177,13 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 break;
             case DATE:
                 {
-                    string str = std::to_string(d.intVal/10000) + "-" + std::to_string((d.intVal/100)%100) + "-" + std::to_string(d.intVal%100);
+                    string str = std::to_string(d.intVal/10000) + "-" ;
+                    int mt = (d.intVal/100)%100;
+                    if(mt<10) str += "0";
+                    str += std::to_string((d.intVal/100)%100) + "-";
+                    int dt = d.intVal % 100;
+                    if(dt<10) str += "0";
+                    str += std::to_string(d.intVal%100);
                     std::cout << setw(len[index]) << setiosflags(ios::left) << str;
                 }
                 break;
@@ -330,5 +336,6 @@ bool isDate(string dateStr, int& date){
         default:
             return false;
     }
+    date = yr*10000+mt*100+dt;
     return true;
 }
