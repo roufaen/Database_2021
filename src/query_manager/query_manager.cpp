@@ -396,6 +396,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     }
     // 要求修改的某些列不存在
     if (updateCount < (int)updateHeaderNameList.size()) {
+        cerr << "Input data format error. Operation failed." << endl;
         return -1;
     }
 
@@ -430,6 +431,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
             for (int j = 0; j < (int)headerList.size(); j++) {
                 if (updatePos[j] == 1 && headerList[j].isPrimary == true && dataList[j].refCount != 0) {
                     cerr << "Column " << headerList[j].headerName << " has elements referenced. Operation failed." << endl;
+                    return -1;
                 }
             }
             dataLists.push_back(dataList);
@@ -440,13 +442,15 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
 
     // 更新数据
     for (int i = 0; i < (int)updateRidList.size(); i++) {
-        RID rid;
         this->systemManager->opDelete(tableName, dataLists[i], updateRidList[i]);
         for (int j = 0; j < (int)updateDataList.size(); j++) {
             if (updatePos[j] == 1) {
                 dataLists[i][j] = updateDataList[j];
             }
         }
+    }
+    for (int i = 0; i < (int)updateRidList.size(); i++) {
+        RID rid;
         if (exeInsert(tableName, dataLists[i], rid) == 0) {
             updatedRidList.push_back(rid);
         } else {
