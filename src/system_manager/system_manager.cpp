@@ -689,11 +689,11 @@ int SystemManager::createForeign(string tableName, string foreignTableName, vect
             //VarType updateHeaderType = updateHeaderList[i].varType == VARCHAR ? CHAR : updateHeaderList[i].varType;
             headerType = headerList[j].varType == VARCHAR ? CHAR : headerList[j].varType;
             if (updateHeaderList[i].headerName == headerList[j].headerName) {
-                // 不能同时为主键和外键
+                /*// 不能同时为主键和外键
                 if (headerList[j].isPrimary == true) {
                     cerr << "Column " << updateHeaderList[i].headerName << " is part of primary key. Operation failed." << endl;
                     return -1;
-                }
+                }*/
                 // 不能同时为两个外键
                 if (headerList[j].isForeign == true) {
                     cerr << "Column " << updateHeaderList[i].headerName << " is already part of foreign key. Operation failed." << endl;
