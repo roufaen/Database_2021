@@ -18,6 +18,19 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     string dbName = this->systemManager->getDbName();
     int totNum = 1;
 
+    if (selectorList.size() == 0) {
+        vector <string> tmpTableNameList = tableNameList;
+        tableNameList.clear();
+        for (int i = 0; i < (int)tmpTableNameList.size(); i++) {
+            Table *tmpTable = this->systemManager->getTable(tmpTableNameList[i]);
+            vector <TableHeader> tmpHeaderList = tmpTable->getHeaderList();
+            for (int j = 0; j < (int)tmpHeaderList.size(); j++) {
+                tableNameList.push_back(tmpTableNameList[i]);
+                selectorList.push_back(tmpHeaderList[j].headerName);
+            }
+        }
+    }
+
     for (int i = 0; i < (int)conditionList.size(); i++) {
         if (!this->systemManager->hasTable(conditionList[i].leftTableName) || (conditionList[i].useColumn == true && this->systemManager->hasTable(conditionList[i].rightTableName))) {
             cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
@@ -192,7 +205,7 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) 
     }
     for (int i = 0; i < (int)headerList.size(); i++) {
         // 是否非法空值
-        if (dataList[i].isNull == true && headerList[i].permitNull == false) {
+        if (dataList[i].isNull == true && (headerList[i].permitNull == false || headerList[i].isPrimary == true)) {
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
@@ -372,7 +385,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     // 更新的数据本身是否存在问题
     for (int i = 0; i < (int)headerList.size(); i++) {
         // 是否非法空值
-        if (updatePos[i] == 1 && updateDataList[i].isNull == true && headerList[i].permitNull == false) {
+        if (updatePos[i] == 1 && updateDataList[i].isNull == true && (headerList[i].permitNull == false || headerList[i].isPrimary == true)) {
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
