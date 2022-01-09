@@ -84,6 +84,7 @@ public:
     {
         currentNodeId = bn->pageId;
         currentOverflowPageId = 0;
+        currentOverflowPage = nullptr;
     }
 
     void revaildate();

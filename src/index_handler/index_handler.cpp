@@ -260,15 +260,13 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     IndexScan lb = lowerBound(key);  
     if(!lb.available()) return ret;
     
+    lb.getKey(nowdata);
+    if(compare(type, key, nowdata) != 0) return ret;
+
     IndexScan hb = lb;
     hb.nextKey();
     
-    lb.getKey(nowdata);
-    if(compare(type, key, nowdata) != 0) return ret;
-    
-    //std::cout << " " << getTreeFilename() << *((int*)key) << count(key) << std::endl;
     while(lb.available() && !lb.equals(hb)){
-        //if(*((int*)key) == 1) std::cout << "GOT " << (accumulate++) <<std::endl;
         ret.push_back(lb.getValue());
         lb.revaildate();
         lb.next();

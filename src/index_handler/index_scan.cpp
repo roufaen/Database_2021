@@ -52,6 +52,7 @@ RID IndexScan::getValue(){
 }
 
 void IndexScan::next(){
+    revaildate();
     int c = currentNode->data[currentKeyPos].count;
     // std::cout << "OVER 400 " << currentValuePos << " " << c << std::endl;
     if(currentValuePos < c - 1) currentValuePos++;
@@ -61,7 +62,8 @@ void IndexScan::next(){
 void IndexScan::nextKey(){
     currentCumulation = 0;
     currentOverflowPage = nullptr;
-    int c=  currentNode-> recs;
+    revaildate();
+    int c =  currentNode->recs;
     if(currentKeyPos < c-1){
         currentKeyPos++;
         currentValuePos = 0;
@@ -75,10 +77,9 @@ void IndexScan::nextKey(){
         }else {
             int index; //index is useless
             currentNodeId = nextPage;
-            this->currentNode = (BPlusNode*) tree->treeFile->getPage(nextPage, index);
+            currentNode = (BPlusNode*) tree->treeFile->getPage(nextPage, index);
             currentKeyPos = 0;
             currentValuePos = 0;
-            currentOverflowPage = nullptr;
         }
     }
 }

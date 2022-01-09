@@ -112,7 +112,9 @@ class MyVisitor: public SQLBaseVisitor {
         } else if(dt.varType == FLOAT){
           dt.floatVal = getValue<float>(field);
           dt.varType = FLOAT;
-        } else if(dt.varType == DATE && isDate(field, dt.intVal)) {
+        } else if(dt.varType == DATE) {
+          field = "'" + field + "'";
+          isDate(field, dt.intVal);
           dt.varType = DATE;
         }
         else {
@@ -342,9 +344,8 @@ class MyVisitor: public SQLBaseVisitor {
     }
     tableNameList.clear();
     selectorList.clear();
-    //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
     //NO GROUPED SEARCH SUPPORTED
-    if(ctx->selectors() != nullptr) {
+    if(ctx->selectors() != nullptr && (ctx->selectors()->selector()).size() > 0) {
         auto sls = ctx->selectors()->selector();
         for(auto i:sls)
         {
