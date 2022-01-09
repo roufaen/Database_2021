@@ -97,7 +97,7 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<Data> datalist;
     int accumulate = 0;
     while (getline(inFile, lineStr)){
-      std::cout << (accumulate++) << std::endl;
+      //std::cout << (accumulate++) << std::endl;
       datalist.clear();
       istringstream sin(lineStr);
       string field;

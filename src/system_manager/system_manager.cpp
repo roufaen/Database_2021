@@ -532,12 +532,12 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         cerr << "Column(s) you selected have duplicate elements. Operation failed." << endl;
         return -1;
     }
-
+    vector <RID> ridList = table->getRecordList();
     for (int i = 0; i < (int)headerNameList.size(); i++) {
         int find = 0;
         for (int j = 0; j < (int)headerList.size(); j++) {
             if (headerNameList[i] == headerList[j].headerName) {
-                // 不能同时为主键和外键
+                /*// 不能同时为主键和外键
                 if (headerList[j].isForeign == true) {
                     cerr << "Column " << headerList[j].headerName << " is already part of a foreign key. Operation failed." << endl;
                     return -1;
@@ -545,6 +545,13 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
                 } else if (headerList[j].permitNull == true) {
                     cerr << "Column " << headerList[j].headerName << " permits null. Operation failed." << endl;
                     return -1;
+                }*/
+                for (int k = 0; k < (int)ridList.size(); k++) {
+                    vector <Data> dataList = table->exeSelect(ridList[k]);
+                    if (dataList[j].isNull == true) {
+                        cerr << "Column " << headerList[j].headerName << " has null elements. Operation failed." << endl;
+                        return -1;
+                    }
                 }
                 find = 1;
                 break;
