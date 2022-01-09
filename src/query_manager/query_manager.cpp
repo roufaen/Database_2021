@@ -14,9 +14,10 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     vector <TableHeader> headerList;
     vector <vector <RID> > ridList;
     map <string, int> tableMap;
-    vector <string> wholeList = tableNameList;
+    vector <string> wholeTableNameList = tableNameList;
+    vector <string> wholeSelectorNameList = selectorList;
     string dbName = this->systemManager->getDbName();
-    int totNum = 1;
+    long long totNum = 1;
 
     if (selectorList.size() == 0) {
         vector <string> tmpTableNameList = tableNameList;
@@ -32,13 +33,18 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     }
 
     for (int i = 0; i < (int)conditionList.size(); i++) {
-        if (!this->systemManager->hasTable(conditionList[i].leftTableName) || (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName))) {
+        if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
             cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
             return -1;
+        } else if (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName)) {
+            cerr << "Table " << conditionList[i].rightTableName << " doesn't exist. Operation failed." << endl;
+            return -1;
         }
-        wholeList.push_back(conditionList[i].leftTableName);
+        wholeTableNameList.push_back(conditionList[i].leftTableName);
+        wholeSelectorNameList.push_back(conditionList[i].leftCol);
         if (conditionList[i].useColumn == true) {
-            wholeList.push_back(conditionList[i].rightTableName);
+            wholeTableNameList.push_back(conditionList[i].rightTableName);
+            wholeSelectorNameList.push_back(conditionList[i].rightCol);
         } else {
             Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
             vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
@@ -53,16 +59,16 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     }
 
     // 获取用到的所有 table ，其 header 进行连接
-    for (int i = 0; i < (int)wholeList.size(); i++) {
+    for (int i = 0; i < (int)wholeTableNameList.size(); i++) {
         // 判断 table 是否存在
-        if (!this->systemManager->hasTable(wholeList[i])) {
-            cerr << "Table " << wholeList[i] << " doesn't exist. Operation failed." << endl;
+        if (!this->systemManager->hasTable(wholeTableNameList[i])) {
+            cerr << "Table " << wholeTableNameList[i] << " doesn't exist. Operation failed." << endl;
             return -1;
         }
 
-        if (tableMap.count(wholeList[i]) == 0) {
-            tableMap[wholeList[i]] = i;
-            Table *table = this->systemManager->getTable(wholeList[i]);
+        if (tableMap.count(wholeTableNameList[i]) == 0) {
+            tableMap[wholeTableNameList[i]] = tableList.size();
+            Table *table = this->systemManager->getTable(wholeTableNameList[i]);
             tableList.push_back(table);
             vector <TableHeader> originalHeaderList = table->getHeaderList();
             for (int j = 0; j < (int)originalHeaderList.size(); j++) {
@@ -133,31 +139,42 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                         }
                     }
                 }
+                if (conditionList[j].leftTableName == wholeTableNameList[i] && (conditionList[j].useColumn == false || conditionList[j].rightTableName == wholeTableNameList[i])) {
+                    vector <RID> tmpRids;
+                    for (int k = 0; k < (int)rids.size(); k++) {
+                        vector <Data> dataList = table->exeSelect(rids[k]);
+                        vector <Condition> vecCondition;
+                        vecCondition.push_back(conditionList[j]);
+                        if (conditionJudge(originalHeaderList, dataList, vecCondition)) {
+                            tmpRids.push_back(rids[k]);
+                        }
+                    }
+                    if (tmpRids.size() < rids.size()) {
+                        rids = tmpRids;
+                    }
+                }
             }
             ridList.push_back(rids);
             totNum *= rids.size();
         }
 
-        // 判断 header 是否存在
-        if (i < (int)tableNameList.size()) {
-            vector <TableHeader> originalHeaderList = tableList[tableMap[tableNameList[i]]]->getHeaderList();
-            bool headerFind = false;
-            for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-                if (originalHeaderList[j].headerName == selectorList[i]) {
-                    headerFind = true;
-                }
+        vector <TableHeader> originalHeaderList = tableList[tableMap[wholeTableNameList[i]]]->getHeaderList();
+        bool headerFind = false;
+        for (int j = 0; j < (int)originalHeaderList.size(); j++) {
+            if (originalHeaderList[j].headerName == wholeSelectorNameList[i]) {
+                headerFind = true;
             }
-            if (headerFind == false) {
-                cerr << "Column " << selectorList[i] << " doesn't exist. Operation failed." << endl;
-                return -1;
-            }
+        }
+        if (headerFind == false) {
+            cerr << "Column " << wholeSelectorNameList[i] << " doesn't exist. Operation failed." << endl;
+            return -1;
         }
     }
 
     // data 进行连接
-    for (int i = 0; i < totNum; i++) {
+    for (long long i = 0; i < totNum; i++) {
         vector <Data> jointData;
-        for (int j = 0, tmp = i; j < (int)ridList.size(); j++) {
+        for (long long j = 0, tmp = i; j < (int)ridList.size(); j++) {
             RID rid = ridList[j][tmp % ridList[j].size()];
             tmp /= ridList[j].size();
             vector <Data> data = tableList[j]->exeSelect(rid);
