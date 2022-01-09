@@ -1137,7 +1137,7 @@ void SystemManager::opCreateIndex(string tableName, string headerName) {
 }
 
 void SystemManager::opDropIndex(string tableName, string headerName) {
-    this->indexHandler->removeIndex(tableName, headerName);
+    this->indexHandler->removeIndex("index_" + getDbName() + "_" + tableName, headerName);
 }
 
 RID SystemManager::opInsert(string tableName, vector <Data> dataList) {

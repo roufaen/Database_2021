@@ -1,4 +1,3 @@
-
 add_subdirectory(utils)
 add_subdirectory(buf_manager)
 add_subdirectory(record_handler)
