@@ -182,7 +182,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
                         aggregationDataInit.varType = FLOAT;
                     } else if (aggregation == true && (jointHeaderList[j].varType == CHAR || jointHeaderList[j].varType == VARCHAR) && (selectorList[i].second != "AVG" || selectorList[i].second != "SUM")) {
                         aggregationDataInit.varType = VARCHAR;
-                    } else {
+                    } else if (aggregation == true) {
                         cerr << "Data type and aggregator mismatch. Operation failed." << endl;
                         return -1;
                     }
