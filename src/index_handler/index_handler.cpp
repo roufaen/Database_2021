@@ -34,14 +34,14 @@ int compare(VarType _type, key_ptr a, char* b){
     return 0;
 }
 
-void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type){
+void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type, int len){
     tableName = _tableName;
     colName = _colName;
     type = _type;
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
     if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
-        keyFile->createFile(keyFileName, getLen(nowdata, _type));
+        keyFile->createFile(keyFileName, getLen(nowdata, _type, len));
         keyFile->openFile(keyFileName);
     }
     treeFile->openFile(treeFileName.c_str());

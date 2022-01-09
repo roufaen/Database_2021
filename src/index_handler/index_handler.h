@@ -23,7 +23,7 @@ public:
         delete keyFile;
         delete treeFile;
     }
-    void openIndex(std::string tableName, std::string colName, VarType type);
+    void openIndex(std::string tableName, std::string colName, VarType type, int len=0);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
