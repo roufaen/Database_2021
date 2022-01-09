@@ -9,31 +9,53 @@ QueryManager::QueryManager(IndexHandler *indexHandler, SystemManager *systemMana
 QueryManager::~QueryManager() {
 }
 
-int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selectorList, vector <Condition> conditionList, vector <vector <Data> >& resData) {
+int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <string, string>, string> > selectorList, vector <Condition> conditionList, bool aggregation, vector <vector <Data> >& resData) {
     vector <Table*> tableList;
-    vector <TableHeader> headerList;
-    vector <vector <RID> > ridList;
-    map <string, int> tableMap;
-    vector <string> wholeTableNameList = tableNameList;
-    vector <string> wholeSelectorNameList = selectorList;
+    vector <TableHeader> jointHeaderList;
+    vector <vector <RID> > ridLists;
     string dbName = this->systemManager->getDbName();
     long long totNum = 1;
 
-    /*if (selectorList.size() == 0) {
-        vector <string> tmpTableNameList = tableNameList;
-        tableNameList.clear();
-        for (int i = 0; i < (int)tmpTableNameList.size(); i++) {
-            Table *tmpTable = this->systemManager->getTable(tmpTableNameList[i]);
-            vector <TableHeader> tmpHeaderList = tmpTable->getHeaderList();
-            for (int j = 0; j < (int)tmpHeaderList.size(); j++) {
-                tableNameList.push_back(tmpTableNameList[i]);
-                selectorList.push_back(tmpHeaderList[j].headerName);
+    for (int i = 0; i < (int)tableNameList.size(); i++) {
+        // 判断 table 是否存在
+        if (!this->systemManager->hasTable(tableNameList[i])) {
+            cerr << "Table " << tableNameList[i] << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+    }
+
+    for (int i = 0; i < (int)selectorList.size(); i++) {
+        if (aggregation == true && selectorList[i].second == "COUNT" && selectorList[i].first.first == "*") {
+            continue;
+        }
+        // 判断 table 是否存在
+        if (!this->systemManager->hasTable(selectorList[i].first.first)) {
+            cerr << "Table " << tableNameList[i] << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+        // 判断 header 是否存在
+        Table *table = this->systemManager->getTable(selectorList[i].first.first);
+        vector <TableHeader> headerList = table->getHeaderList();
+        bool headerFind = false;
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerList[j].headerName == selectorList[i].first.second) {
+                headerFind = true;
             }
         }
-    }*/
+        if (headerFind == false) {
+            cerr << "Column " << selectorList[i].first.second << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+        // 判断 aggregator 是否合法
+        if (aggregation == true && selectorList[i].second != "SUM" && selectorList[i].second != "AVG" && selectorList[i].second != "MIN" && selectorList[i].second != "MAX") {
+            cerr << "Aggregator " << selectorList[i].second << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+    }
 
+    // 解决 INT 和 FLOAT 的区别问题
     for (int i = 0; i < (int)conditionList.size(); i++) {
-        if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
+        /*if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
             cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
             return -1;
         } else if (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName)) {
@@ -45,155 +67,204 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
         if (conditionList[i].useColumn == true) {
             wholeTableNameList.push_back(conditionList[i].rightTableName);
             wholeSelectorNameList.push_back(conditionList[i].rightCol);
-        } else {
-            Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
-            vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
-            for (int j = 0; j < (int)leftTableHeader.size(); j++) {
-                if (conditionList[i].leftCol == leftTableHeader[j].headerName && conditionList[i].rightType == INT && leftTableHeader[j].varType == FLOAT) {
-                    conditionList[i].rightType = FLOAT;
-                    conditionList[i].rightFloatVal = conditionList[i].rightIntVal;
-                    break;
-                }
+        } else {*/
+        Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
+        vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
+        for (int j = 0; j < (int)leftTableHeader.size(); j++) {
+            if (conditionList[i].leftCol == leftTableHeader[j].headerName && conditionList[i].rightType == INT && leftTableHeader[j].varType == FLOAT) {
+                conditionList[i].rightType = FLOAT;
+                conditionList[i].rightFloatVal = conditionList[i].rightIntVal;
+                break;
             }
         }
+        //}
     }
 
     // 获取用到的所有 table ，其 header 进行连接
-    for (int i = 0; i < (int)wholeTableNameList.size(); i++) {
-        // 判断 table 是否存在
-        if (!this->systemManager->hasTable(wholeTableNameList[i])) {
-            cerr << "Table " << wholeTableNameList[i] << " doesn't exist. Operation failed." << endl;
-            return -1;
-        }
-
-        if (tableMap.count(wholeTableNameList[i]) == 0) {
-            tableMap[wholeTableNameList[i]] = tableList.size();
-            Table *table = this->systemManager->getTable(wholeTableNameList[i]);
-            tableList.push_back(table);
-            vector <TableHeader> originalHeaderList = table->getHeaderList();
-            for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-                headerList.push_back(originalHeaderList[j]);
-            }
-            vector <RID> rids = table->getRecordList();
-            for (int j = 0; j < (int)conditionList.size(); j++) {
-                if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
-                    continue;
-                }
-                for (int k = 0; k < (int)originalHeaderList.size(); k++) {
-                    if (originalHeaderList[k].isPrimary == true || originalHeaderList[k].isUnique == true || originalHeaderList[k].hasIndex == true) {
-                        if (conditionList[j].leftTableName == originalHeaderList[k].tableName && conditionList[j].leftCol == originalHeaderList[k].headerName) {
-                            key_ptr key;
-                            char str[MAX_RECORD_LEN];
-                            if ((conditionList[j].rightType == INT && originalHeaderList[k].varType == INT) || (conditionList[j].rightType == DATE && originalHeaderList[k].varType == DATE)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, INT);
-                                key = (char*)&conditionList[j].rightIntVal;
-                            } else if (conditionList[j].rightType == FLOAT && originalHeaderList[k].varType == FLOAT) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, FLOAT);
-                                key = (char*)&conditionList[j].rightFloatVal;
-                            } else if ((conditionList[j].rightType == CHAR || conditionList[j].rightType == VARCHAR) && (originalHeaderList[k].varType == CHAR || originalHeaderList[k].varType == VARCHAR)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, VARCHAR);
-                                memcpy(str, conditionList[j].rightStringVal.c_str(), conditionList[j].rightStringVal.size());
-                                key = str;
+    for (int i = 0; i < (int)tableNameList.size(); i++) {
+        //if (tableMap.count(wholeTableNameList[i]) == 0) {
+        //    tableMap[wholeTableNameList[i]] = tableList.size();
+        Table *table = this->systemManager->getTable(tableNameList[i]);
+        tableList.push_back(table);
+        vector <TableHeader> headerList = table->getHeaderList();
+        jointHeaderList.insert(jointHeaderList.end(), headerList.begin(), headerList.end());
+        vector <RID> ridList = table->getRecordList(), conditionRidList;
+        for (int j = 0; j < (int)conditionList.size(); j++) {
+            /*if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
+                continue;
+            }*/
+            // 用索引判断
+            for (int k = 0; k < (int)headerList.size(); k++) {
+                if (conditionList[j].useColumn == false && conditionList[j].rightNull == false && (headerList[k].isPrimary == true || headerList[k].isUnique == true || headerList[k].hasIndex == true)
+                    && conditionList[j].leftTableName == headerList[k].tableName && conditionList[j].leftCol == headerList[k].headerName) {
+                    key_ptr key = NULL;
+                    char str[MAX_RECORD_LEN];
+                    if ((conditionList[j].rightType == INT && headerList[k].varType == INT) || (conditionList[j].rightType == DATE && headerList[k].varType == DATE)) {
+                        this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + headerList[k].tableName, conditionList[j].leftCol, INT);
+                        key = (char*)&conditionList[j].rightIntVal;
+                    } else if (conditionList[j].rightType == FLOAT && headerList[k].varType == FLOAT) {
+                        this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + headerList[k].tableName, conditionList[j].leftCol, FLOAT);
+                        key = (char*)&conditionList[j].rightFloatVal;
+                    } else if ((conditionList[j].rightType == CHAR || conditionList[j].rightType == VARCHAR) && (headerList[k].varType == CHAR || headerList[k].varType == VARCHAR)) {
+                        this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + headerList[k].tableName, conditionList[j].leftCol, VARCHAR);
+                        memcpy(str, conditionList[j].rightStringVal.c_str(), conditionList[j].rightStringVal.size());
+                        key = str;
+                    }
+                    conditionRidList.clear();
+                    if (conditionList[j].condType == EQUAL) {
+                        conditionRidList = this->indexHandler->getRIDs(key);
+                    } else {
+                        if (conditionList[j].condType == LESS_EQUAL) {
+                            IndexScan indexScanner = this->indexHandler->greaterBound(key);
+                            indexScanner.available() ? indexScanner.previous() : indexScanner.setToEnd();
+                            while(indexScanner.available()) {
+                                conditionRidList.push_back(indexScanner.getValue());
+                                indexScanner.previous();
                             }
-                            vector <RID> tmpRids;
-                            if (conditionList[j].condType == EQUAL) {
-                                tmpRids = this->indexHandler->getRIDs(key);
-                            } else {
-                                if (conditionList[j].condType == LESS_EQUAL) {
-                                    IndexScan indexScanner = this->indexHandler->greaterBound(key);
-                                    if(indexScanner.available()) indexScanner.previous();
-                                        else indexScanner.setToEnd();
-                                    while(indexScanner.available()) {
-                                        tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.previous();
-                                    }
-                                } else if (conditionList[j].condType == LESS) {
-                                    IndexScan indexScanner = this->indexHandler->upperBound(key);
-                                    if(indexScanner.available()) indexScanner.previous();
-                                        else {
-                                            indexScanner.setToEnd();
-                                        }
-                                    while(indexScanner.available()) {
-                                        tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.previous();
-                                    }
-                                } else if (conditionList[j].condType == GREATER_EQUAL) {
-                                    IndexScan indexScanner = this->indexHandler->upperBound(key);
-                                    while(indexScanner.available()) {
-                                        tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.next();
-                                    }
-                                } else if (conditionList[j].condType == GREATER) {
-                                    IndexScan indexScanner = this->indexHandler->greaterBound(key);
-                                    while(indexScanner.available()) {
-                                        tmpRids.push_back(indexScanner.getValue());
-                                        // std::cout << "NEXT" << std::endl;
-                                        indexScanner.next();
-                                    }
-                                }
+                        } else if (conditionList[j].condType == LESS) {
+                            IndexScan indexScanner = this->indexHandler->upperBound(key);
+                            indexScanner.available() ? indexScanner.previous() : indexScanner.setToEnd();
+                            while(indexScanner.available()) {
+                                conditionRidList.push_back(indexScanner.getValue());
+                                indexScanner.previous();
                             }
-                            indexHandler->closeIndex();
-                            if (tmpRids.size() < rids.size()) {
-                                rids = tmpRids;
+                        } else if (conditionList[j].condType == GREATER_EQUAL) {
+                            IndexScan indexScanner = this->indexHandler->upperBound(key);
+                            while(indexScanner.available()) {
+                                conditionRidList.push_back(indexScanner.getValue());
+                                indexScanner.next();
+                            }
+                        } else if (conditionList[j].condType == GREATER) {
+                            IndexScan indexScanner = this->indexHandler->greaterBound(key);
+                            while(indexScanner.available()) {
+                                conditionRidList.push_back(indexScanner.getValue());
+                                indexScanner.next();
                             }
                         }
                     }
-                }
-                if (conditionList[j].leftTableName == wholeTableNameList[i] && (conditionList[j].useColumn == false || conditionList[j].rightTableName == wholeTableNameList[i])) {
-                    vector <RID> tmpRids;
-                    for (int k = 0; k < (int)rids.size(); k++) {
-                        vector <Data> dataList = table->exeSelect(rids[k]);
-                        vector <Condition> vecCondition;
-                        vecCondition.push_back(conditionList[j]);
-                        if (conditionJudge(originalHeaderList, dataList, vecCondition)) {
-                            tmpRids.push_back(rids[k]);
-                        }
-                    }
-                    if (tmpRids.size() < rids.size()) {
-                        rids = tmpRids;
-                    }
+                    indexHandler->closeIndex();
+                    ridList = conditionRidList.size() < ridList.size() ? conditionRidList : ridList;
                 }
             }
-            ridList.push_back(rids);
-            totNum *= rids.size();
-        }
-
-        vector <TableHeader> originalHeaderList = tableList[tableMap[wholeTableNameList[i]]]->getHeaderList();
-        bool headerFind = false;
-        for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-            if (originalHeaderList[j].headerName == wholeSelectorNameList[i]) {
-                headerFind = true;
+            if (conditionList[j].leftTableName == tableNameList[i] && (conditionList[j].useColumn == false || conditionList[j].rightTableName == tableNameList[i])) {
+                conditionRidList.clear();
+                for (int k = 0; k < (int)ridList.size(); k++) {
+                    vector <Data> dataList = table->exeSelect(ridList[k]);
+                    vector <Condition> conditionContainer;
+                    conditionContainer.push_back(conditionList[j]);
+                    if (conditionJudge(headerList, dataList, conditionContainer)) {
+                        conditionRidList.push_back(ridList[k]);
+                    }
+                }
+                ridList = conditionRidList.size() < ridList.size() ? conditionRidList : ridList;
             }
         }
-        if (headerFind == false) {
-            cerr << "Column " << wholeSelectorNameList[i] << " doesn't exist. Operation failed." << endl;
-            return -1;
-        }
+        ridLists.push_back(ridList);
+        totNum *= ridList.size();
+        //}
     }
 
     // data 进行连接
-    for (long long i = 0; i < totNum; i++) {
-        vector <Data> jointData;
-        for (long long j = 0, tmp = i; j < (int)ridList.size(); j++) {
-            RID rid = ridList[j][tmp % ridList[j].size()];
-            tmp /= ridList[j].size();
-            vector <Data> data = tableList[j]->exeSelect(rid);
-            for (int k = 0; k < (int)data.size(); k++) {
-                jointData.push_back(data[k]);
-            }
-        }
-        // 判断是否满足选择条件，若是则选择要求的列输出
-        if (conditionJudge(headerList, jointData, conditionList)) {
-            vector <Data> res;
-            for (int j = 0; j < (int)selectorList.size(); j++) {
-                for (int k = 0; k < (int)headerList.size(); k++) {
-                    if (headerList[k].tableName == tableNameList[j] && headerList[k].headerName == selectorList[j]) {
-                        res.push_back(jointData[k]);
+    vector <int> selectPos;
+    vector <Data> aggregationRes;
+    long long counter = 0;
+    for (int i = 0; i < (int)selectorList.size(); i++) {
+        Data aggregationDataInit = { 0, 0, 0.0, "", INT, false };
+        if (aggregation == true && selectorList[i].second == "COUNT" && selectorList[i].first.first == "*") {
+            selectPos.push_back(-1);
+        } else {
+            for (int j = 0; j < (int)jointHeaderList.size(); j++) {
+                if (selectorList[i].first.first == jointHeaderList[j].tableName && selectorList[i].first.second == jointHeaderList[j].headerName) {
+                    selectPos.push_back(j);
+                    if (aggregation == true && jointHeaderList[j].varType == INT) {
+                        aggregationDataInit.varType = INT;
+                    } else if (aggregation == true && jointHeaderList[j].varType == FLOAT) {
+                        aggregationDataInit.varType = FLOAT;
+                    } else if (aggregation == true && (jointHeaderList[j].varType == CHAR || jointHeaderList[j].varType == VARCHAR) && (selectorList[i].second != "AVG" || selectorList[i].second != "SUM")) {
+                        aggregationDataInit.varType = VARCHAR;
+                    } else if (aggregation == true) {
+                        cerr << "Data type and aggregator mismatch. Operation failed." << endl;
+                        return -1;
                     }
                 }
             }
-            resData.push_back(res);
         }
+        if (aggregation == true) {
+            // 用 refCount 暂存 aggregator 类型
+            if (selectorList[i].second == "COUNT") {
+                aggregationDataInit.refCount = 0;
+                aggregationDataInit.intVal = 0;
+            } else if (selectorList[i].second == "AVG") {
+                aggregationDataInit.refCount = 1;
+                aggregationDataInit.intVal = 0;
+            } else if (selectorList[i].second == "SUM") {
+                aggregationDataInit.refCount = 2;
+                aggregationDataInit.intVal = 0;
+            } else if (selectorList[i].second == "MIN") {
+                aggregationDataInit.refCount = 3;
+                aggregationDataInit.intVal = 2147483647;
+                aggregationDataInit.floatVal = DBL_MAX;
+                aggregationDataInit.stringVal = "\127";
+            } else if (selectorList[i].second == "MAX") {
+                aggregationDataInit.refCount = 4;
+                aggregationDataInit.intVal = -2147483648;
+                aggregationDataInit.floatVal = -DBL_MAX;
+                aggregationDataInit.stringVal = "\000";
+            }
+            aggregationRes.push_back(aggregationDataInit);
+        }
+    }
+    for (long long i = 0; i < totNum; i++) {
+        vector <Data> jointData;
+        for (long long j = 0, tmp = i; j < (int)ridLists.size(); j++) {
+            vector <Data> data = tableList[j]->exeSelect(ridLists[j][tmp % ridLists[j].size()]);
+            jointData.insert(jointData.end(), data.begin(), data.end());
+            tmp /= ridLists[j].size();
+        }
+        // 判断是否满足选择条件，若是则选择要求的列输出
+        if (conditionJudge(jointHeaderList, jointData, conditionList)) {
+            counter++;
+            vector <Data> res;
+            if (aggregation == false) {
+                for (int j = 0; j < (int)selectPos.size(); j++) {
+                    res.push_back(jointData[selectPos[j]]);
+                }
+                resData.push_back(res);
+            } else {
+                for (int j = 0; j < (int)selectPos.size(); j++) {
+                    if (aggregationRes[j].refCount == 0) {
+                        if (selectPos[j] == -1) {
+                            aggregationRes[j].intVal++;
+                        } else {
+                            aggregationRes[j].intVal += !jointData[selectPos[j]].isNull;
+                        }
+                    } else if (aggregationRes[j].refCount == 1 || aggregationRes[j].refCount == 2) {
+                        aggregationRes[j].intVal += jointData[selectPos[j]].intVal;
+                        aggregationRes[j].floatVal += jointData[selectPos[j]].floatVal;
+                    } else if (aggregationRes[j].refCount == 3) {
+                        aggregationRes[j].intVal = jointData[selectPos[j]].intVal < aggregationRes[j].intVal ? jointData[selectPos[j]].intVal : aggregationRes[j].intVal;
+                        aggregationRes[j].floatVal = jointData[selectPos[j]].floatVal < aggregationRes[j].floatVal ? jointData[selectPos[j]].floatVal : aggregationRes[j].floatVal;
+                        aggregationRes[j].stringVal = jointData[selectPos[j]].stringVal < aggregationRes[j].stringVal ? jointData[selectPos[j]].stringVal : aggregationRes[j].stringVal;
+                    } else if (aggregationRes[j].refCount == 4) {
+                        aggregationRes[j].intVal = jointData[selectPos[j]].intVal > aggregationRes[j].intVal ? jointData[selectPos[j]].intVal : aggregationRes[j].intVal;
+                        aggregationRes[j].floatVal = jointData[selectPos[j]].floatVal > aggregationRes[j].floatVal ? jointData[selectPos[j]].floatVal : aggregationRes[j].floatVal;
+                        aggregationRes[j].stringVal = jointData[selectPos[j]].stringVal > aggregationRes[j].stringVal ? jointData[selectPos[j]].stringVal : aggregationRes[j].stringVal;
+                    }
+                }
+            }
+        }
+    }
+    if (aggregation == true) {
+        for (int i = 0; i < (int)aggregationRes.size(); i++) {
+            if (aggregationRes[i].varType == 1) {
+                if (aggregationRes[i].varType == INT) {
+                    aggregationRes[i].floatVal = aggregationRes[i].intVal * 1.0 / counter;
+                } else {
+                    aggregationRes[i].floatVal = aggregationRes[i].floatVal / counter;
+                }
+            }
+        }
+        resData.push_back(aggregationRes);
     }
 
     return 0;
@@ -464,61 +535,21 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
         }
     }
 
-    /*// 判断 Unique 冲突
-    for (int i = 0; i < (int)headerList.size(); i++) {
-        if (updatePos[i] == true && (headerList[i].isPrimary == true || headerList[i].isUnique == true)) {
-            // 多个数据相同，冲突
-            if (dataLists.size() > 1) {
-                return -1;
-            // 只有一个数据修改
-            } else if (dataLists[0][i].isNull == false) {
-                int counter = 0;
-                for (int j = 0; j < (int)ridList.size(); j++) {
-                    vector <Data> dataList = table->exeSelect(ridList[j]);
-                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
-                        counter++;
-                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
-                        counter++;
-                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
-                        counter++;
-                    }
-                }
-                // 若修改后的数值本不存在，则可直接修改，否则判断修改前后数值是否一样，若不一样则说明有冲突
-                if (counter != 0) {
-                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    }
-                }
-            }
-        }
-    }
-
-    // 判断外键冲突
-    for (int i = 0; i < (int)headerList.size(); i++) {
-        if (updatePos[i] == true && headerList[i].isForeign == true && updateDataList[i].isNull == false) {
-            // 外键不能引用不存在的键
-            if (foreignKeyExistJudge(headerList[i], updateDataList[i])) {
-                if (headerList[i].varType == INT || headerList[i].varType == DATE) {
-                    cerr << "Foreign key " << updateDataList[i].intVal << " doesn't exist. Operation failed." << endl;
-                } else if (headerList[i].varType == FLOAT) {
-                    cerr << "Foreign key " << updateDataList[i].floatVal << " doesn't exist. Operation failed." << endl;
-                } else if (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) {
-                    cerr << "Foreign key " << updateDataList[i].stringVal << " doesn't exist. Operation failed." << endl;
-                }
-                return -1;
-            }
-        }
-    }*/
-
     return 0;
 }
+
+/*int QueryManager::exeAggregationSelect(string tableName, string groupHeaderName, bool group, vector <string> aggregatorList, vector <string> aggregateHeaderList, vector <Condition> conditionList) {
+    // 判断 table 是否存在
+    if (!this->systemManager->hasTable(tableName)) {
+        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
+        return -1;
+    }
+    Table *table = this->systemManager->getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
+    vector <RID> ridList = table->getRecordList();
+    if ()
+    return 0;
+}*/
 
 bool QueryManager::compare(int lInt, double lFloat, string lString, int rInt, double rFloat, string rString, ConditionType cond) {
     bool intEqual = (lInt == rInt), floatEqual = (lFloat == rFloat), stringEqual = (lString == rString);
@@ -697,3 +728,57 @@ bool QueryManager::judgeUnique(string tableName, vector <string> judgeHeaderList
             }
         }*/
 }
+
+
+    /*// 判断 Unique 冲突
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (updatePos[i] == true && (headerList[i].isPrimary == true || headerList[i].isUnique == true)) {
+            // 多个数据相同，冲突
+            if (dataLists.size() > 1) {
+                return -1;
+            // 只有一个数据修改
+            } else if (dataLists[0][i].isNull == false) {
+                int counter = 0;
+                for (int j = 0; j < (int)ridList.size(); j++) {
+                    vector <Data> dataList = table->exeSelect(ridList[j]);
+                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
+                        counter++;
+                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
+                        counter++;
+                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
+                        counter++;
+                    }
+                }
+                // 若修改后的数值本不存在，则可直接修改，否则判断修改前后数值是否一样，若不一样则说明有冲突
+                if (counter != 0) {
+                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
+                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
+                        return -1;
+                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
+                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
+                        return -1;
+                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
+                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
+                        return -1;
+                    }
+                }
+            }
+        }
+    }
+
+    // 判断外键冲突
+    for (int i = 0; i < (int)headerList.size(); i++) {
+        if (updatePos[i] == true && headerList[i].isForeign == true && updateDataList[i].isNull == false) {
+            // 外键不能引用不存在的键
+            if (foreignKeyExistJudge(headerList[i], updateDataList[i])) {
+                if (headerList[i].varType == INT || headerList[i].varType == DATE) {
+                    cerr << "Foreign key " << updateDataList[i].intVal << " doesn't exist. Operation failed." << endl;
+                } else if (headerList[i].varType == FLOAT) {
+                    cerr << "Foreign key " << updateDataList[i].floatVal << " doesn't exist. Operation failed." << endl;
+                } else if (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) {
+                    cerr << "Foreign key " << updateDataList[i].stringVal << " doesn't exist. Operation failed." << endl;
+                }
+                return -1;
+            }
+        }
+    }*/

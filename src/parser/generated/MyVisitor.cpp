@@ -102,13 +102,16 @@ inline int getNumLen(int a) {
     return sign + 10;
 }
 
-void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data){
-    auto t_i = tableName.begin();
-    auto t_j = colName.begin();
+void print(const std::vector<std::pair<std::pair<std::string, std::string>, std::string>>& colList, const vector<vector<Data>>& data){
     vector<int> len;
-    while(t_i!=tableName.end() && t_j!=colName.end()){
-        len.push_back((*t_i).length() + 1 + (*t_j).length());
-        t_i++; t_j++;
+    vector<std::string> colName;
+    colName.clear();
+    for(auto i:colList){
+        std::string col = i.first.first + "." + i.first.second;
+        if(col == "*.*") col = "*";
+        if(i.second.length()) col = i.second + "(" + col + ")";
+        len.push_back(col.length());
+        colName.push_back(col);
     }
     for(auto dt:data){
         int index = 0;
@@ -140,7 +143,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
             index++;
         }
     }
-    int num_of_col = tableName.size();
+    int num_of_col = len.size();
     std::cout<<"+";
     for(int i=0; i<num_of_col; i++)
     {
@@ -152,7 +155,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<"|";
     for(int i=0; i<num_of_col; i++)
     {
-        std::cout << setw(len[i]) << setiosflags(ios::left) <<(tableName[i] + "." + colName[i]);
+        std::cout << setw(len[i]) << setiosflags(ios::left) << colName[i];
         std::cout<<"|";
     }
     std::cout << std::endl;
@@ -338,4 +341,12 @@ bool isDate(string dateStr, int& date){
     }
     date = yr*10000+mt*100+dt;
     return true;
+}
+
+std::string getAggType(SQLParser::AggregatorContext *agg){
+    if(agg->Count()) return "COUNT";
+    if(agg->Average()) return "AVG";
+    if(agg->Sum()) return "SUM";
+    if(agg->Min()) return "MIN";
+    return "MAX";
 }

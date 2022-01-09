@@ -7,7 +7,7 @@
 
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
-void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data);
+void print(const std::vector<std::pair<std::pair<std::string, std::string>, std::string>>& colName, const vector<vector<Data>>& data);
 void print(const string header, const vector<string>& data);
 void print(const vector<string>& tableName, const vector<vector<string>>& data);
 bool isDate(string dateStr, int& date);
@@ -16,6 +16,8 @@ template <class Type>
 Type getValue(const string& str);
 
 bool getFromValue(Data& dt, SQLParser::ValueContext* data);
+
+std::string getAggType(SQLParser::AggregatorContext *aggregator);
 
 class MyVisitor: public SQLBaseVisitor {
     private:
@@ -342,7 +344,7 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<std::vector<Data>> resData;
     resData.clear();
     std::vector<std::string> tableNameList;
-    std::vector<std::string> selectorList;
+    std::vector<std::pair<std::pair<std::string, std::string>, std::string>> selectorList;
     visitWhere_and_clause(ctx->where_and_clause());
     if(alwaysFalse) {
       std::cout << "Nothing to do\n";
@@ -350,32 +352,49 @@ class MyVisitor: public SQLBaseVisitor {
     }
     tableNameList.clear();
     selectorList.clear();
+    bool haveAgg = false;
     //NO GROUPED SEARCH SUPPORTED
     if(ctx->selectors() != nullptr && (ctx->selectors()->selector()).size() > 0) {
         auto sls = ctx->selectors()->selector();
         for(auto i:sls)
         {
-          tableNameList.push_back(i->column()->Identifier(0)->getText());
-          selectorList.push_back(i->column()->Identifier(1)->getText());
+          if(i->Count()) {
+            haveAgg = true;
+            selectorList.push_back(make_pair(make_pair("*","*"), "COUNT"));
+          }
+          else if(i->aggregator()) {
+            haveAgg = true;
+            std::string tableName = i->column()->Identifier(0)->getText();
+            std::string headerName = i->column()->Identifier(1)->getText();
+            std::string aggType =  getAggType(i->aggregator());
+            selectorList.push_back( make_pair( make_pair(tableName, headerName), aggType) );
+          } else {
+            std::string tableName = i->column()->Identifier(0)->getText();
+            std::string headerName = i->column()->Identifier(1)->getText();
+            selectorList.push_back(make_pair(make_pair(tableName, headerName),""));
+          }
         }
+        auto ili = ctx->identifiers()->Identifier();
+        for(auto i:ili)
+          tableNameList.push_back(i->getText());
     } else {
       auto sls = ctx->identifiers()->Identifier();
       std::vector<TableHeader> th;
       for(auto i:sls){
         std::string tbN = i->getText();
+        tableNameList.push_back(tbN);
         th.clear();
         sm->getHeaderList(tbN, th);
         for(auto j:th)
         {
-          tableNameList.push_back(tbN);
-          selectorList.push_back(j.headerName);
+          selectorList.push_back(make_pair(make_pair(tbN, j.headerName),""));
         }
       }
     }
     time_t first = time(NULL);
-    if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
+    if (qm->exeSelect(tableNameList, selectorList, conditionList, haveAgg, resData) == 0) {
       time_t second = time(NULL);
-      print(tableNameList, selectorList, resData);
+      print(selectorList, resData);
       printf("Get return in %f seconds\n",std::difftime(second,first));
     } else printf("Fail to select the data\n");
     return defaultResult();
