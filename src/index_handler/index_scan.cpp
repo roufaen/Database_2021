@@ -21,6 +21,7 @@ RID IndexScan::getValue(){
     // char* nowdata = new char[MAX_RECORD_LEN];
     // getKey(nowdata);
     // std::cout << currentNodeId << "GETVALUE" << *((int*)nowdata) << std::endl;
+    std::cout << currentCumulation << " " << currentOverflowPageId << " " << currentValuePos << std::endl;
     if(currentNode->data[currentKeyPos].count == 1) return currentNode->data[currentKeyPos].value;
     if(currentOverflowPage == nullptr) {
         currentCumulation = 0;

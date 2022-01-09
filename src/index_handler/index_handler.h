@@ -74,7 +74,12 @@ private:
 
 class IndexScan{
 public:
-    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){currentNode = nullptr;}
+    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){
+        currentCumulation = 0;
+        currentOverflowPage = nullptr;
+        currentOverflowPageId = 0;
+        currentNode = nullptr;
+    }
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
     {
         currentNodeId = bn->pageId;

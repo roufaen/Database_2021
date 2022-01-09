@@ -1,10 +1,10 @@
 #include "index_handler.h"
 
-int getLen(key_ptr key, VarType _type){
+int getLen(key_ptr key, VarType _type, int size=0){
     switch (_type){
         case FLOAT: return sizeof(double);
         case INT: return sizeof(int);
-        case VARCHAR: return strlen(key)*sizeof(char);
+        case VARCHAR: return ((size==0) ? 256 : strlen(key) ) *sizeof(char);
         default: return 0;
     }
 }
@@ -41,7 +41,7 @@ void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarTy
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
     if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
-        keyFile->createFile(keyFileName);
+        keyFile->createFile(keyFileName, getLen(nowdata, _type, 200));
         keyFile->openFile(keyFileName);
     }
     treeFile->openFile(treeFileName.c_str());
