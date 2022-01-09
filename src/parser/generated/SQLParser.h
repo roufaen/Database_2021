@@ -21,9 +21,9 @@ public:
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
     T__44 = 45, T__45 = 46, T__46 = 47, T__47 = 48, T__48 = 49, T__49 = 50, 
     T__50 = 51, EqualOrAssign = 52, Less = 53, LessEqual = 54, Greater = 55, 
-    GreaterEqual = 56, NotEqual = 57, Is = 58, Count = 59, Average = 60, 
-    Max = 61, Min = 62, Sum = 63, Null = 64, Identifier = 65, Integer = 66, 
-    Date = 67, String = 68, Float = 69, Whitespace = 70, Annotation = 71
+    GreaterEqual = 56, NotEqual = 57, Is = 58, IsNot = 59, Count = 60, Average = 61, 
+    Max = 62, Min = 63, Sum = 64, Null = 65, Identifier = 66, Integer = 67, 
+    Date = 68, String = 69, Float = 70, Whitespace = 71, Annotation = 72
   };
 
   enum {
@@ -391,6 +391,16 @@ public:
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
 
+  class  Alter_table_drop_uniqueContext : public Alter_statementContext {
+  public:
+    Alter_table_drop_uniqueContext(Alter_statementContext *ctx);
+
+    antlr4::tree::TerminalNode *Identifier();
+    IdentifiersContext *identifiers();
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+  };
+
   class  Alter_table_drop_foreign_keyContext : public Alter_statementContext {
   public:
     Alter_table_drop_foreign_keyContext(Alter_statementContext *ctx);
@@ -454,8 +464,9 @@ public:
   public:
     Foreign_key_fieldContext(FieldContext *ctx);
 
-    std::vector<antlr4::tree::TerminalNode *> Identifier();
-    antlr4::tree::TerminalNode* Identifier(size_t i);
+    std::vector<IdentifiersContext *> identifiers();
+    IdentifiersContext* identifiers(size_t i);
+    antlr4::tree::TerminalNode *Identifier();
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
@@ -674,6 +685,7 @@ public:
     antlr4::tree::TerminalNode *GreaterEqual();
     antlr4::tree::TerminalNode *NotEqual();
     antlr4::tree::TerminalNode *Is();
+    antlr4::tree::TerminalNode *IsNot();
 
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;

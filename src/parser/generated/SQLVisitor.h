@@ -69,6 +69,8 @@ public:
 
     virtual antlrcpp::Any visitAlter_table_add_unique(SQLParser::Alter_table_add_uniqueContext *context) = 0;
 
+    virtual antlrcpp::Any visitAlter_table_drop_unique(SQLParser::Alter_table_drop_uniqueContext *context) = 0;
+
     virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *context) = 0;
 
     virtual antlrcpp::Any visitAlter_drop_col(SQLParser::Alter_drop_colContext *context) = 0;

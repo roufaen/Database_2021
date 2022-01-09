@@ -5,8 +5,8 @@ void parse(std::string sSQL, QueryManager* qm, IndexHandler* ih, SystemManager* 
     SQLLexer iLexer(&sInputStream);
     CommonTokenStream sTokenStream(&iLexer);
     SQLParser iParser(&sTokenStream);
-    if(iParser.getNumberOfSyntaxErrors() != 0) return;
     auto iTree = iParser.program();
+    if(iParser.getNumberOfSyntaxErrors() != 0) return;
     MyVisitor myVisitor(qm,ih,sm); 
     try
     {

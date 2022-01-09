@@ -7,6 +7,7 @@ Greater: '>';
 GreaterEqual: '>=';
 NotEqual: '<>';
 Is: 'IS';
+IsNot: 'IS NOT';
 
 Count: 'COUNT';
 Average: 'AVG';
@@ -72,6 +73,7 @@ alter_statement
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'PRIMARY' 'KEY' '(' identifiers ')'      # alter_table_add_pk
     | 'ALTER' 'TABLE' Identifier 'ADD' 'CONSTRAINT' Identifier 'FOREIGN' 'KEY' '(' identifiers ')' 'REFERENCES' Identifier '(' identifiers ')'  # alter_table_add_foreign_key
     | 'ALTER' 'TABLE' Identifier 'ADD' 'UNIQUE' '(' identifiers ')'   # alter_table_add_unique
+    | 'ALTER' 'TABLE' Identifier 'DROP' 'UNIQUE' '(' identifiers ')'   # alter_table_drop_unique
     | 'ALTER' 'TABLE' Identifier 'ADD' Identifier type_ # alter_add_col
     | 'ALTER' 'TABLE' Identifier 'DROP' 'COLUMN' Identifier # alter_drop_col
     ;
@@ -83,7 +85,7 @@ field_list
 field
     : Identifier type_ ('NOT' Null)? ('DEFAULT' value)?                                 # normal_field
     | 'PRIMARY' 'KEY' '(' identifiers ')'                                               # primary_key_field
-    | 'FOREIGN' 'KEY' '(' Identifier ')' 'REFERENCES' Identifier '(' Identifier ')'     # foreign_key_field
+    | 'FOREIGN' 'KEY' '(' identifiers ')' 'REFERENCES' Identifier '(' identifiers ')'     # foreign_key_field
     ;
 
 type_
@@ -154,6 +156,7 @@ operate
     | GreaterEqual
     | NotEqual
     | Is
+    | IsNot
     ;
 
 

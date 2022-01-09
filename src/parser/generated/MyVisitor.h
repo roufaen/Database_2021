@@ -183,11 +183,17 @@ class MyVisitor: public SQLBaseVisitor {
           SQLParser::Foreign_key_fieldContext* pointer = dynamic_cast<SQLParser::Foreign_key_fieldContext*>(i);
           if(pointer != nullptr) {
               tableHeader.clear();
-              std::string foreignTable = pointer->Identifier(1)->getText();
-              th.headerName = pointer->Identifier(0)->getText();
-              th.isForeign = true;
-              th.foreignHeaderName = pointer->Identifier(2)->getText();
-              tableHeader.push_back(th);
+              // One tag here
+              std::string foreignTable = pointer->Identifier()->getText();
+              auto selfid= pointer->identifiers(0)->Identifier();
+              auto othid = pointer->identifiers(1)->Identifier();
+              for(int i = 0; i < selfid.size(); i++){
+                  th.foreignHeaderName = othid[i]->getText();
+                  th.foreignTableName = foreignTable;
+                  th.headerName = selfid[i]->getText();
+                  th.isForeign = true;
+                  tableHeader.push_back(th);
+              }
               if (sm->createForeign(tableName,foreignTable, tableHeader)) {
                 sm->dropTable(tableName);
                 printf("Fail to create the table\n");
@@ -484,6 +490,18 @@ class MyVisitor: public SQLBaseVisitor {
     return defaultResult();
   }
 
+   virtual antlrcpp::Any visitAlter_table_drop_unique(SQLParser::Alter_table_drop_uniqueContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
+    std::vector<string> listName;
+    listName.clear();
+    auto list = ctx->identifiers()->Identifier();
+    for(auto i:list){
+      listName.push_back(i->getText());
+    }
+    sm->dropUnique(ctx->Identifier()->getText(), listName);
+    return defaultResult();
+  }
+
   virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *ctx) override {
     TableHeader th;
     th.tableName = ctx->Identifier(0)->getText();
@@ -533,8 +551,9 @@ class MyVisitor: public SQLBaseVisitor {
         cond.rightNull = dt.isNull;
         cond.rightType = dt.varType;
         cond.useColumn = false;
-        if(cond.rightNull == true && cond.condType == ConditionType::EQUAL) alwaysFalse = true;
-          else if (cond.condType == ConditionType::IN) cond.condType = ConditionType::EQUAL;
+        if(cond.rightNull == true && cond.condType != ConditionType::IS && cond.condType != ConditionType::ISNOT) alwaysFalse = true;
+        if (cond.condType == ConditionType::IS) cond.condType = ConditionType::EQUAL;
+        if (cond.condType == ConditionType::ISNOT) cond.condType = ConditionType::NOT_EQUAL;
       } else if (ec->column() != nullptr) {
         cond.rightTableName = ec->column()->Identifier(0)->getText();
         cond.rightCol = ec->column()->Identifier(1)->getText();
