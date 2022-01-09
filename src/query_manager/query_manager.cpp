@@ -19,7 +19,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     string dbName = this->systemManager->getDbName();
     long long totNum = 1;
 
-    if (selectorList.size() == 0) {
+    /*if (selectorList.size() == 0) {
         vector <string> tmpTableNameList = tableNameList;
         tableNameList.clear();
         for (int i = 0; i < (int)tmpTableNameList.size(); i++) {
@@ -30,7 +30,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                 selectorList.push_back(tmpHeaderList[j].headerName);
             }
         }
-    }
+    }*/
 
     for (int i = 0; i < (int)conditionList.size(); i++) {
         if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
@@ -453,7 +453,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
             for (int k = 0; k < (int)updatedRidList.size(); k++) {
                 this->systemManager->opDelete(tableName, dataLists[k], updatedRidList[k]);
             }
-            for (int k = 0; k < (int)updatedRidList.size(); k++) {
+            for (int k = 0; k < (int)updateRidList.size(); k++) {
                 this->systemManager->opInsert(tableName, originalDataLists[k]);
             }
             return -1;
