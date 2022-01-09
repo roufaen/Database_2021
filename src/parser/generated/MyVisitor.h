@@ -330,7 +330,7 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
-    if(!(ctx->selectors() && ctx->identifiers())) return defaultResult();
+    if(!(ctx->identifiers())) return defaultResult();
     std::vector<std::vector<Data>> resData;
     resData.clear();
     std::vector<std::string> tableNameList;
@@ -341,13 +341,29 @@ class MyVisitor: public SQLBaseVisitor {
       return defaultResult();
     }
     tableNameList.clear();
+    selectorList.clear();
     //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
     //NO GROUPED SEARCH SUPPORTED
-    auto sls = ctx->selectors()->selector();
-    for(auto i:sls)
-    {
-      tableNameList.push_back(i->column()->Identifier(0)->getText());
-      selectorList.push_back(i->column()->Identifier(1)->getText());
+    if(ctx->selectors() != nullptr) {
+        auto sls = ctx->selectors()->selector();
+        for(auto i:sls)
+        {
+          tableNameList.push_back(i->column()->Identifier(0)->getText());
+          selectorList.push_back(i->column()->Identifier(1)->getText());
+        }
+    } else {
+      auto sls = ctx->identifiers()->Identifier();
+      std::vector<TableHeader> th;
+      for(auto i:sls){
+        std::string tbN = i->getText();
+        th.clear();
+        sm->getHeaderList(tbN, th);
+        for(auto j:th)
+        {
+          tableNameList.push_back(tbN);
+          selectorList.push_back(j.headerName);
+        }
+      }
     }
     time_t first = time(NULL);
     if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
