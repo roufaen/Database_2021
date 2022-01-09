@@ -25,7 +25,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
     }
 
     for (int i = 0; i < (int)selectorList.size(); i++) {
-        if (aggregation == true && selectorList[i].second == "COUNT") {
+        if (aggregation == true && selectorList[i].second == "COUNT" && selectorList[i].first.first == "*") {
             continue;
         }
         // 判断 table 是否存在
@@ -170,7 +170,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
     long long counter = 0;
     for (int i = 0; i < (int)selectorList.size(); i++) {
         Data aggregationDataInit = { 0, 0, 0.0, "", INT, false };
-        if (aggregation == true && selectorList[i].second == "COUNT") {
+        if (aggregation == true && selectorList[i].second == "COUNT" && selectorList[i].first.first == "*") {
             selectPos.push_back(-1);
         } else {
             for (int j = 0; j < (int)jointHeaderList.size(); j++) {
@@ -233,7 +233,11 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
             } else {
                 for (int j = 0; j < (int)selectPos.size(); j++) {
                     if (aggregationRes[j].refCount == 0) {
-                        aggregationRes[j].intVal++;
+                        if (selectPos[j] == -1) {
+                            aggregationRes[j].intVal++;
+                        } else {
+                            aggregationRes[j].intVal += !jointData[selectPos[j]].isNull;
+                        }
                     } else if (aggregationRes[j].refCount == 1 || aggregationRes[j].refCount == 2) {
                         aggregationRes[j].intVal += jointData[selectPos[j]].intVal;
                         aggregationRes[j].floatVal += jointData[selectPos[j]].floatVal;
