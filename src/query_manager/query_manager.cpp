@@ -32,7 +32,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     }
 
     for (int i = 0; i < (int)conditionList.size(); i++) {
-        if (!this->systemManager->hasTable(conditionList[i].leftTableName) || (conditionList[i].useColumn == true && this->systemManager->hasTable(conditionList[i].rightTableName))) {
+        if (!this->systemManager->hasTable(conditionList[i].leftTableName) || (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName))) {
             cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
             return -1;
         }
