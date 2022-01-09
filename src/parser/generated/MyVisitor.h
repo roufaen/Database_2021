@@ -3,11 +3,14 @@
 #include "SQLLexer.h"
 #include "antlr4-runtime.h"
 #include "../../query_manager/query_manager.h"
+#include <time.h>
 
 VarType getVarType(SQLParser::Type_Context*, int& len);
 ConditionType getCondType(SQLParser::OperateContext*);
 void print(const vector<string>& tableName, const vector<string>& colName, const vector<vector<Data>>& data);
-bool isDate(string& dateStr, int& date);
+void print(const string header, const vector<string>& data);
+void print(const vector<string>& tableName, const vector<vector<string>>& data);
+bool isDate(string dateStr, int& date);
 
 template <class Type>  
 Type getValue(const string& str);
@@ -21,11 +24,11 @@ class MyVisitor: public SQLBaseVisitor {
       IndexHandler* ih;
       SystemManager* sm;
       std::vector<Condition> conditionList;
+      bool alwaysFalse;
 
     public:
-  MyVisitor(QueryManager* _qm, RecordHandler* _rh, IndexHandler* _ih, SystemManager* _sm){
+  MyVisitor(QueryManager* _qm, IndexHandler* _ih, SystemManager* _sm){
     qm = _qm;
-    rh = _rh;
     ih = _ih;
     sm = _sm;
   }
@@ -44,9 +47,10 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitShow_dbs(SQLParser::Show_dbsContext *ctx) override {
-    //TODO
-    printf("I should show the dbs here, but now no interface\n");
-    return visitChildren(ctx);
+    std::vector<string> dbnames;
+    sm->getDbNameList(dbnames);
+    print("Database", dbnames);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitUse_db(SQLParser::Use_dbContext *ctx) override {
@@ -57,36 +61,79 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitShow_tables(SQLParser::Show_tablesContext *ctx) override {
-    //TODO
-    printf("I should show the tables here, but now no interface\n");
-    return visitChildren(ctx);
+    std::vector<std::string> tablenames;
+    if(sm->getTableNameList(tablenames)==0) print("Table", tablenames);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitShow_indexes(SQLParser::Show_indexesContext *ctx) override {
-    //TODO
-    printf("I should show the indexes here, but now no interface\n");
+    std::string tableName = ctx->Identifier()->getText();
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(tableName, th);
+    std::vector<string> vec;
+    for(auto it:th){
+      if(it.isUnique || it.isPrimary || it.hasIndex) vec.push_back(it.tableName+"."+it.headerName);
+    }
+    print("Cols with Index", vec);
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
     std::string tableName = ctx->Identifier()->getText();
-    ifstream inFile(ctx->String()->getText(), ios::in);
-    string lineStr;
-    while (getline(inFile, lineStr)){
-      std::string command = "INSERT INTO " + tableName + " VALUES (" + lineStr + ");";
-      antlr4::ANTLRInputStream sInputStream(command);
-      SQLLexer iLexer(&sInputStream);
-      antlr4::CommonTokenStream sTokenStream(&iLexer);
-      SQLParser iParser(&sTokenStream);
-      auto iTree = iParser.program();
-      this->visit(iTree);
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(tableName, th);
+    vector<string> vec;
+    vec.clear();
+    for(auto i:th){
+      if(i.isPrimary) vec.push_back(i.headerName);
     }
+    sm->dropPrimary(tableName,vec);
+    std::string fileID = ctx->String()->getText();
+    fileID = fileID.substr(1, fileID.length() - 2);
+    ifstream inFile(fileID, ios::in);
+    string lineStr;
+    std::vector<Data> datalist;
+    int accumulate = 0;
+    while (getline(inFile, lineStr)){
+      //std::cout << (accumulate++) << std::endl;
+      datalist.clear();
+      istringstream sin(lineStr);
+      string field;
+      auto it = th.begin();
+      while(getline(sin, field, ',')){
+        Data dt = {0,0,0, "",0,false};
+        dt.varType = (*it).varType;
+        if(field=="NULL") dt.isNull = true;
+        else if (dt.varType == INT){
+          dt.intVal = getValue<int>(field);
+          dt.varType = INT;
+        } else if(dt.varType == FLOAT){
+          dt.floatVal = getValue<float>(field);
+          dt.varType = FLOAT;
+        } else if(dt.varType == DATE) {
+          field =  field;
+          isDate(field, dt.intVal);
+          dt.varType = DATE;
+        }
+        else {
+          dt.varType = VARCHAR;
+          dt.stringVal = field;
+        }
+        it++;
+        datalist.push_back(dt);
+      }
+      sm->opInsert(tableName.c_str(), datalist); 
+    }
+    if(vec.size()) sm->opCreatePrimary(tableName.c_str(),vec);
+    std::cout << "Finish to load the data" << std::endl;
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitStore_data(SQLParser::Store_dataContext *ctx) override {
     //TODO
-    printf("I should store data to a file here, but now no interface\n");
+    printf("Interface not supported.\n");
     return visitChildren(ctx);
   }
 
@@ -136,11 +183,17 @@ class MyVisitor: public SQLBaseVisitor {
           SQLParser::Foreign_key_fieldContext* pointer = dynamic_cast<SQLParser::Foreign_key_fieldContext*>(i);
           if(pointer != nullptr) {
               tableHeader.clear();
-              std::string foreignTable = pointer->Identifier(1)->getText();
-              th.headerName = pointer->Identifier(0)->getText();
-              th.isForeign = true;
-              th.foreignHeaderName = pointer->Identifier(1)->getText();
-              tableHeader.push_back(th);
+              // One tag here
+              std::string foreignTable = pointer->Identifier()->getText();
+              auto selfid= pointer->identifiers(0)->Identifier();
+              auto othid = pointer->identifiers(1)->Identifier();
+              for(int i = 0; i < selfid.size(); i++){
+                  th.foreignHeaderName = othid[i]->getText();
+                  th.foreignTableName = foreignTable;
+                  th.headerName = selfid[i]->getText();
+                  th.isForeign = true;
+                  tableHeader.push_back(th);
+              }
               if (sm->createForeign(tableName,foreignTable, tableHeader)) {
                 sm->dropTable(tableName);
                 printf("Fail to create the table\n");
@@ -154,19 +207,63 @@ class MyVisitor: public SQLBaseVisitor {
         }
       } 
     }
-    printf("Begin to create the table\n");
+    if(!isCreated) {
+      if(sm->createTable(tableName, tableHeader)) return defaultResult();
+    }
+    printf("Successfully create the new table\n");
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitDrop_table(SQLParser::Drop_tableContext *ctx) override {
     if(!ctx->Identifier()) return defaultResult();
-    sm->dropDb(ctx->Identifier()->getText());
+    sm->dropTable(ctx->Identifier()->getText());
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitDescribe_table(SQLParser::Describe_tableContext *ctx) override {
-    //TODO
-    return visitChildren(ctx);
+    std::vector<TableHeader> th;
+    th.clear();
+    sm->getHeaderList(ctx->Identifier()->getText(), th);
+    std::vector<string> tb;
+    tb.clear();
+    tb.push_back("Field");
+    tb.push_back("Type");
+    tb.push_back("Null");
+    tb.push_back("Key");
+    tb.push_back("Extra");
+    std::vector<vector<std::string>> vec;
+    for(auto t:th){
+      vector<string> ve;
+      ve.clear();
+      ve.push_back(t.headerName);
+      switch(t.varType){
+        case INT:
+          ve.push_back("INT");
+          break;
+        case FLOAT:
+          ve.push_back("FLOAT");
+          break;
+        case VARCHAR:
+          ve.push_back("VARCHAR("+to_string(t.len)+")");
+          break;
+        case DATE:
+          ve.push_back("DATE");
+          break;
+      }
+      if(t.permitNull) ve.push_back("YES");
+      else ve.push_back("NO");
+      std::string key;
+      int fig = (int)t.isForeign + (int)t.isUnique + (int)t.isPrimary;
+      if(fig>1) key = "MUL";
+      else if(t.isForeign) key = "FOR";
+      else if(t.isUnique) key = "UNI";
+      else if(t.isPrimary) key = "PRI";
+      ve.push_back(key);
+      ve.push_back("");
+      vec.push_back(ve);
+    }
+    print(tb,vec);
+    return defaultResult();
   }
 
   virtual antlrcpp::Any visitInsert_into_table(SQLParser::Insert_into_tableContext *ctx) override {
@@ -203,6 +300,10 @@ class MyVisitor: public SQLBaseVisitor {
     if(!(ctx->Identifier() && ctx->where_and_clause())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
     visitWhere_and_clause(ctx->where_and_clause());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
+    }
     if(conditionList.size()) qm->exeDelete(tableName.c_str(), conditionList);
     else cerr << "The condition fails\n";
     return defaultResult();
@@ -214,6 +315,10 @@ class MyVisitor: public SQLBaseVisitor {
     std::vector<std::string> headerList;
     std::vector<Data> dataList;
     visitWhere_and_clause(ctx->where_and_clause());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
+    }
     SQLParser::Set_clauseContext* sc = ctx->set_clause();
     auto sc_eq = sc->EqualOrAssign();
     int size = sc_eq.size();
@@ -233,23 +338,45 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
-    if(!(ctx->where_and_clause() && ctx->selectors() && ctx->identifiers())) return defaultResult();
+    if(!(ctx->identifiers())) return defaultResult();
     std::vector<std::vector<Data>> resData;
     resData.clear();
     std::vector<std::string> tableNameList;
     std::vector<std::string> selectorList;
     visitWhere_and_clause(ctx->where_and_clause());
-    tableNameList.clear();
-    //WARNING: AT PRESENT ONLY COL IS SUPPORTED IN SELECTOR LIST
-    //NO GROUPED SEARCH SUPPORTED
-    auto sls = ctx->selectors()->selector();
-    for(auto i:sls)
-    {
-      tableNameList.push_back(i->column()->Identifier(0)->getText());
-      selectorList.push_back(i->column()->Identifier(1)->getText());
+    if(alwaysFalse) {
+      std::cout << "Nothing to do\n";
+      return defaultResult();
     }
+    tableNameList.clear();
+    selectorList.clear();
+    //NO GROUPED SEARCH SUPPORTED
+    if(ctx->selectors() != nullptr && (ctx->selectors()->selector()).size() > 0) {
+        auto sls = ctx->selectors()->selector();
+        for(auto i:sls)
+        {
+          tableNameList.push_back(i->column()->Identifier(0)->getText());
+          selectorList.push_back(i->column()->Identifier(1)->getText());
+        }
+    } else {
+      auto sls = ctx->identifiers()->Identifier();
+      std::vector<TableHeader> th;
+      for(auto i:sls){
+        std::string tbN = i->getText();
+        th.clear();
+        sm->getHeaderList(tbN, th);
+        for(auto j:th)
+        {
+          tableNameList.push_back(tbN);
+          selectorList.push_back(j.headerName);
+        }
+      }
+    }
+    time_t first = time(NULL);
     if (qm->exeSelect(tableNameList, selectorList, conditionList, resData) == 0) {
+      time_t second = time(NULL);
       print(tableNameList, selectorList, resData);
+      printf("Get return in %f seconds\n",std::difftime(second,first));
     } else printf("Fail to select the data\n");
     return defaultResult();
   }
@@ -257,7 +384,7 @@ class MyVisitor: public SQLBaseVisitor {
   virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
     if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
-    auto& headerTable = ctx->identifiers()->Identifier();
+    auto headerTable = ctx->identifiers()->Identifier();
     // 以下部分用于支持联合索引（？）
     // for(auto i:headerTable){
       // sm->createIndex(tableName, i->getText());
@@ -269,7 +396,7 @@ class MyVisitor: public SQLBaseVisitor {
   virtual antlrcpp::Any visitAlter_drop_index(SQLParser::Alter_drop_indexContext *ctx) override {
     if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
     std::string tableName = ctx->Identifier()->getText();
-    auto& headerTable = ctx->identifiers()->Identifier();
+    auto headerTable = ctx->identifiers()->Identifier();
     // 以下部分用于支持联合索引（？）
     // for(auto i:headerTable){
       // sm->createIndex(tableName, i->getText());
@@ -279,15 +406,14 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
-    if(ctx->Identifier()) {
-      return defaultResult();
-    }
-    auto& id = ctx->identifiers()->Identifier();
     std::vector<std::string> identifiers;
     identifiers.clear();
-    for(int i=1; i<id.size(); i++)
-      identifiers.push_back(id[i]->getText());
-    sm->dropPrimary(id[0]->getText(), identifiers);
+    if(ctx->identifiers()){
+      auto id = ctx->identifiers()->Identifier();
+      for(int i=0; i<id.size(); i++)
+        identifiers.push_back(id[i]->getText());
+    }
+    sm->dropPrimary(ctx->Identifier()->getText(), identifiers);
     return defaultResult();
   }
 
@@ -297,7 +423,7 @@ class MyVisitor: public SQLBaseVisitor {
       return defaultResult();
     }
     std::string tableName = ctx->Identifier()->getText();
-    auto& id = ctx->identifiers()->Identifier();
+    auto id = ctx->identifiers()->Identifier();
     std::vector<std::string> listName;
     listName.clear();
     listName.push_back(id[1]->getText());
@@ -306,13 +432,13 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_add_pk(SQLParser::Alter_table_add_pkContext *ctx) override {
-    auto& identi = ctx->Identifier();
+    auto identi = ctx->Identifier();
     if(identi.size() != 2) {
       return defaultResult();
     }
     string tableName = identi[0]->getText(); 
     string keyName = identi[1]->getText();
-    auto& identifiers = ctx->identifiers()->Identifier();
+    auto identifiers = ctx->identifiers()->Identifier();
     std::vector<std::string> headerName;
     headerName.clear();
     for(auto i:identifiers){
@@ -323,9 +449,9 @@ class MyVisitor: public SQLBaseVisitor {
   }
 
   virtual antlrcpp::Any visitAlter_table_add_foreign_key(SQLParser::Alter_table_add_foreign_keyContext *ctx) override {
-    auto& identi = ctx->Identifier();
-    auto& selfid = ctx->identifiers(0)->Identifier();
-    auto& othid = ctx->identifiers(1)->Identifier();
+    auto identi = ctx->Identifier();
+    auto selfid = ctx->identifiers(0)->Identifier();
+    auto othid = ctx->identifiers(1)->Identifier();
     if(identi.size() != 3 &&  ctx->identifiers().size() != 2) {
       return defaultResult();
     }
@@ -353,21 +479,29 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitAlter_table_add_unique(SQLParser::Alter_table_add_uniqueContext *ctx) override {
     if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
-    // Here locates the line to bear multip unique keys
-    // std::vector<string> listName;
-    // listName.clear();
-    // auto& list = ctx->identifiers()->Identifier();
-    // for(auto i:list){
-    //   listName.push_back(i->getText());
-    // }
-    // sm->createUnique(ctx->Identifier()->getText(), listName);
-    sm->createUnique(ctx->Identifier()->getText(), ctx->identifiers()->Identifier(0)->getText());
+    std::vector<string> listName;
+    listName.clear();
+    auto list = ctx->identifiers()->Identifier();
+    for(auto i:list){
+      listName.push_back(i->getText());
+    }
+    sm->createUnique(ctx->Identifier()->getText(), listName);
+    return defaultResult();
+  }
+
+   virtual antlrcpp::Any visitAlter_table_drop_unique(SQLParser::Alter_table_drop_uniqueContext *ctx) override {
+    if(!(ctx->Identifier() && ctx->identifiers())) return defaultResult();
+    std::vector<string> listName;
+    listName.clear();
+    auto list = ctx->identifiers()->Identifier();
+    for(auto i:list){
+      listName.push_back(i->getText());
+    }
+    sm->dropUnique(ctx->Identifier()->getText(), listName);
     return defaultResult();
   }
 
   virtual antlrcpp::Any visitAlter_add_col(SQLParser::Alter_add_colContext *ctx) override {
-    Data defaultData;
-    defaultData.isNull = true;
     TableHeader th;
     th.tableName = ctx->Identifier(0)->getText();
     th.headerName = ctx->Identifier(1)->getText();
@@ -377,6 +511,9 @@ class MyVisitor: public SQLBaseVisitor {
     th.varType = getVarType(ctx->type_(), th.len);
     th.hasIndex = false;
     th.permitNull = true;
+    Data defaultData;
+    defaultData.isNull = true;
+    defaultData.varType = th.varType;
     sm->createColumn(ctx->Identifier(0)->getText(), th, defaultData);
     return defaultResult();
   }
@@ -388,6 +525,8 @@ class MyVisitor: public SQLBaseVisitor {
 
   virtual antlrcpp::Any visitWhere_and_clause(SQLParser::Where_and_clauseContext *ctx) override{
     conditionList.clear();
+    alwaysFalse = false;
+    if(ctx==nullptr) return defaultResult();
     std::vector<SQLParser::Where_clauseContext *> wax = ctx->where_clause();
     for(auto i:wax){
       Condition cond;
@@ -410,9 +549,14 @@ class MyVisitor: public SQLBaseVisitor {
         cond.rightIntVal = dt.intVal;
         cond.rightNull = dt.isNull;
         cond.rightType = dt.varType;
+        cond.useColumn = false;
+        if(cond.rightNull == true && cond.condType != ConditionType::IS && cond.condType != ConditionType::ISNOT) alwaysFalse = true;
+        if (cond.condType == ConditionType::IS) cond.condType = ConditionType::EQUAL;
+        if (cond.condType == ConditionType::ISNOT) cond.condType = ConditionType::NOT_EQUAL;
       } else if (ec->column() != nullptr) {
         cond.rightTableName = ec->column()->Identifier(0)->getText();
         cond.rightCol = ec->column()->Identifier(1)->getText();
+        cond.useColumn = true;
       } else {
         cerr << "Get error in your right input side\n";
         return defaultResult();

@@ -23,7 +23,7 @@ public:
         delete keyFile;
         delete treeFile;
     }
-    void openIndex(std::string tableName, std::string colName, VarType type);
+    void openIndex(std::string tableName, std::string colName, VarType type, int len=0);
     void insert(key_ptr key, RID rid);
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
@@ -74,9 +74,18 @@ private:
 
 class IndexScan{
 public:
-    IndexScan(IndexHandler *ih):tree(ih){}
+    IndexScan(IndexHandler *ih):tree(ih),currentNodeId(0){
+        currentCumulation = 0;
+        currentOverflowPage = nullptr;
+        currentOverflowPageId = 0;
+        currentNode = nullptr;
+    }
     IndexScan(IndexHandler *ih, BPlusNode* bn, int keyn, int valn):tree(ih), currentNode(bn), currentKeyPos(keyn), currentValuePos(valn)
-    {}
+    {
+        currentNodeId = bn->pageId;
+        currentOverflowPageId = 0;
+        currentOverflowPage = nullptr;
+    }
 
     void revaildate();
     int getKey(char*);
@@ -84,8 +93,9 @@ public:
     void next();
     void previous();
     void setToBegin();
+    void setToEnd();
     bool equals(const IndexScan &other);
-    inline bool available(){return currentNode != nullptr;}
+    inline bool available(){return currentNodeId>0;}
     void nextKey();
     void previousKey();
 
@@ -93,7 +103,8 @@ private:
     IndexHandler* tree;
     BPlusNode* currentNode;
     BPlusOverflowPage* currentOverflowPage;
-    int nowPageId;
+    int currentNodeId;
+    int currentOverflowPageId;
     int currentKeyPos, currentValuePos, currentCumulation;
 };
 

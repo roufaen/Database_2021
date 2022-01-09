@@ -14,14 +14,37 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     vector <TableHeader> headerList;
     vector <vector <RID> > ridList;
     map <string, int> tableMap;
-    vector <string> wholeList = tableNameList;
+    vector <string> wholeTableNameList = tableNameList;
+    vector <string> wholeSelectorNameList = selectorList;
     string dbName = this->systemManager->getDbName();
-    int totNum = 1;
+    long long totNum = 1;
+
+    /*if (selectorList.size() == 0) {
+        vector <string> tmpTableNameList = tableNameList;
+        tableNameList.clear();
+        for (int i = 0; i < (int)tmpTableNameList.size(); i++) {
+            Table *tmpTable = this->systemManager->getTable(tmpTableNameList[i]);
+            vector <TableHeader> tmpHeaderList = tmpTable->getHeaderList();
+            for (int j = 0; j < (int)tmpHeaderList.size(); j++) {
+                tableNameList.push_back(tmpTableNameList[i]);
+                selectorList.push_back(tmpHeaderList[j].headerName);
+            }
+        }
+    }*/
 
     for (int i = 0; i < (int)conditionList.size(); i++) {
-        wholeList.push_back(conditionList[i].leftTableName);
+        if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
+            cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
+            return -1;
+        } else if (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName)) {
+            cerr << "Table " << conditionList[i].rightTableName << " doesn't exist. Operation failed." << endl;
+            return -1;
+        }
+        wholeTableNameList.push_back(conditionList[i].leftTableName);
+        wholeSelectorNameList.push_back(conditionList[i].leftCol);
         if (conditionList[i].useColumn == true) {
-            wholeList.push_back(conditionList[i].rightTableName);
+            wholeTableNameList.push_back(conditionList[i].rightTableName);
+            wholeSelectorNameList.push_back(conditionList[i].rightCol);
         } else {
             Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
             vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
@@ -36,16 +59,16 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
     }
 
     // 获取用到的所有 table ，其 header 进行连接
-    for (int i = 0; i < (int)wholeList.size(); i++) {
+    for (int i = 0; i < (int)wholeTableNameList.size(); i++) {
         // 判断 table 是否存在
-        if (!this->systemManager->hasTable(wholeList[i])) {
-            cerr << "Table " << wholeList[i] << " doesn't exist. Operation failed." << endl;
+        if (!this->systemManager->hasTable(wholeTableNameList[i])) {
+            cerr << "Table " << wholeTableNameList[i] << " doesn't exist. Operation failed." << endl;
             return -1;
         }
 
-        if (tableMap.count(wholeList[i]) == 0) {
-            tableMap[wholeList[i]] = i;
-            Table *table = this->systemManager->getTable(wholeList[i]);
+        if (tableMap.count(wholeTableNameList[i]) == 0) {
+            tableMap[wholeTableNameList[i]] = tableList.size();
+            Table *table = this->systemManager->getTable(wholeTableNameList[i]);
             tableList.push_back(table);
             vector <TableHeader> originalHeaderList = table->getHeaderList();
             for (int j = 0; j < (int)originalHeaderList.size(); j++) {
@@ -62,13 +85,13 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                             key_ptr key;
                             char str[MAX_RECORD_LEN];
                             if ((conditionList[j].rightType == INT && originalHeaderList[k].varType == INT) || (conditionList[j].rightType == DATE && originalHeaderList[k].varType == DATE)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, INT);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, INT);
                                 key = (char*)&conditionList[j].rightIntVal;
                             } else if (conditionList[j].rightType == FLOAT && originalHeaderList[k].varType == FLOAT) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, FLOAT);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, FLOAT);
                                 key = (char*)&conditionList[j].rightFloatVal;
                             } else if ((conditionList[j].rightType == CHAR || conditionList[j].rightType == VARCHAR) && (originalHeaderList[k].varType == CHAR || originalHeaderList[k].varType == VARCHAR)) {
-                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, headerList[j].headerName, VARCHAR);
+                                this->indexHandler->openIndex("index_" + this->systemManager->getDbName() + "_" + originalHeaderList[k].tableName, conditionList[j].leftCol, VARCHAR);
                                 memcpy(str, conditionList[j].rightStringVal.c_str(), conditionList[j].rightStringVal.size());
                                 key = str;
                             }
@@ -77,16 +100,22 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                                 tmpRids = this->indexHandler->getRIDs(key);
                             } else {
                                 if (conditionList[j].condType == LESS_EQUAL) {
-                                    IndexScan indexScanner = this->indexHandler->lowerBound(key);
+                                    IndexScan indexScanner = this->indexHandler->greaterBound(key);
+                                    if(indexScanner.available()) indexScanner.previous();
+                                        else indexScanner.setToEnd();
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.next();
+                                        indexScanner.previous();
                                     }
                                 } else if (conditionList[j].condType == LESS) {
-                                    IndexScan indexScanner = this->indexHandler->lesserBound(key);
+                                    IndexScan indexScanner = this->indexHandler->upperBound(key);
+                                    if(indexScanner.available()) indexScanner.previous();
+                                        else {
+                                            indexScanner.setToEnd();
+                                        }
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
-                                        indexScanner.next();
+                                        indexScanner.previous();
                                     }
                                 } else if (conditionList[j].condType == GREATER_EQUAL) {
                                     IndexScan indexScanner = this->indexHandler->upperBound(key);
@@ -98,6 +127,7 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                                     IndexScan indexScanner = this->indexHandler->greaterBound(key);
                                     while(indexScanner.available()) {
                                         tmpRids.push_back(indexScanner.getValue());
+                                        // std::cout << "NEXT" << std::endl;
                                         indexScanner.next();
                                     }
                                 }
@@ -109,31 +139,42 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <string> selec
                         }
                     }
                 }
+                if (conditionList[j].leftTableName == wholeTableNameList[i] && (conditionList[j].useColumn == false || conditionList[j].rightTableName == wholeTableNameList[i])) {
+                    vector <RID> tmpRids;
+                    for (int k = 0; k < (int)rids.size(); k++) {
+                        vector <Data> dataList = table->exeSelect(rids[k]);
+                        vector <Condition> vecCondition;
+                        vecCondition.push_back(conditionList[j]);
+                        if (conditionJudge(originalHeaderList, dataList, vecCondition)) {
+                            tmpRids.push_back(rids[k]);
+                        }
+                    }
+                    if (tmpRids.size() < rids.size()) {
+                        rids = tmpRids;
+                    }
+                }
             }
             ridList.push_back(rids);
             totNum *= rids.size();
         }
 
-        // 判断 header 是否存在
-        if (i < (int)tableNameList.size()) {
-            vector <TableHeader> originalHeaderList = tableList[tableMap[tableNameList[i]]]->getHeaderList();
-            bool headerFind = false;
-            for (int j = 0; j < (int)originalHeaderList.size(); j++) {
-                if (originalHeaderList[j].headerName == selectorList[i]) {
-                    headerFind = true;
-                }
+        vector <TableHeader> originalHeaderList = tableList[tableMap[wholeTableNameList[i]]]->getHeaderList();
+        bool headerFind = false;
+        for (int j = 0; j < (int)originalHeaderList.size(); j++) {
+            if (originalHeaderList[j].headerName == wholeSelectorNameList[i]) {
+                headerFind = true;
             }
-            if (headerFind == false) {
-                cerr << "Column " << selectorList[i] << " doesn't exist. Operation failed." << endl;
-                return -1;
-            }
+        }
+        if (headerFind == false) {
+            cerr << "Column " << wholeSelectorNameList[i] << " doesn't exist. Operation failed." << endl;
+            return -1;
         }
     }
 
     // data 进行连接
-    for (int i = 0; i < totNum; i++) {
+    for (long long i = 0; i < totNum; i++) {
         vector <Data> jointData;
-        for (int j = 0, tmp = i; j < (int)ridList.size(); j++) {
+        for (long long j = 0, tmp = i; j < (int)ridList.size(); j++) {
             RID rid = ridList[j][tmp % ridList[j].size()];
             tmp /= ridList[j].size();
             vector <Data> data = tableList[j]->exeSelect(rid);
@@ -181,11 +222,11 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) 
     }
     for (int i = 0; i < (int)headerList.size(); i++) {
         // 是否非法空值
-        if (dataList[i].isNull == true && headerList[i].permitNull == false) {
+        if (dataList[i].isNull == true && (headerList[i].permitNull == false || headerList[i].isPrimary == true)) {
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
-        } else if (dataList[i].varType != headerList[i].varType && !((dataList[i].varType == CHAR || dataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
+        } else if (dataList[i].isNull == false && dataList[i].varType != headerList[i].varType && !((dataList[i].varType == CHAR || dataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
             if (dataList[i].varType == INT && headerList[i].varType == FLOAT) {
                 dataList[i].varType = FLOAT;
                 dataList[i].floatVal = dataList[i].intVal;
@@ -355,17 +396,18 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     }
     // 要求修改的某些列不存在
     if (updateCount < (int)updateHeaderNameList.size()) {
+        cerr << "Input data format error. Operation failed." << endl;
         return -1;
     }
 
     // 更新的数据本身是否存在问题
     for (int i = 0; i < (int)headerList.size(); i++) {
         // 是否非法空值
-        if (updatePos[i] == 1 && updateDataList[i].isNull == true && headerList[i].permitNull == false) {
+        if (updatePos[i] == 1 && updateDataList[i].isNull == true && (headerList[i].permitNull == false || headerList[i].isPrimary == true)) {
             cerr << "Column " << headerList[i].headerName << " illegal NULL. Operation failed." << endl;
             return -1;
         // 是否类型不符
-        } else if (updatePos[i] == 1 && updateDataList[i].varType != headerList[i].varType && !((updateDataList[i].varType == CHAR || updateDataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
+        } else if (updateDataList[i].isNull == false && updatePos[i] == 1 && updateDataList[i].varType != headerList[i].varType && !((updateDataList[i].varType == CHAR || updateDataList[i].varType == VARCHAR) && (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR))) {
             if (updateDataList[i].varType == INT && headerList[i].varType == FLOAT) {
                 updateDataList[i].varType = FLOAT;
                 updateDataList[i].floatVal = updateDataList[i].intVal;
@@ -389,6 +431,7 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
             for (int j = 0; j < (int)headerList.size(); j++) {
                 if (updatePos[j] == 1 && headerList[j].isPrimary == true && dataList[j].refCount != 0) {
                     cerr << "Column " << headerList[j].headerName << " has elements referenced. Operation failed." << endl;
+                    return -1;
                 }
             }
             dataLists.push_back(dataList);
@@ -398,21 +441,23 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     }
 
     // 更新数据
-    for (int i = 0; i < (int)ridList.size(); i++) {
-        RID rid;
+    for (int i = 0; i < (int)updateRidList.size(); i++) {
         this->systemManager->opDelete(tableName, dataLists[i], updateRidList[i]);
         for (int j = 0; j < (int)updateDataList.size(); j++) {
             if (updatePos[j] == 1) {
                 dataLists[i][j] = updateDataList[j];
             }
         }
+    }
+    for (int i = 0; i < (int)updateRidList.size(); i++) {
+        RID rid;
         if (exeInsert(tableName, dataLists[i], rid) == 0) {
             updatedRidList.push_back(rid);
         } else {
             for (int k = 0; k < (int)updatedRidList.size(); k++) {
                 this->systemManager->opDelete(tableName, dataLists[k], updatedRidList[k]);
             }
-            for (int k = 0; k < (int)updatedRidList.size(); k++) {
+            for (int k = 0; k < (int)updateRidList.size(); k++) {
                 this->systemManager->opInsert(tableName, originalDataLists[k]);
             }
             return -1;
@@ -478,23 +523,23 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
 bool QueryManager::compare(int lInt, double lFloat, string lString, int rInt, double rFloat, string rString, ConditionType cond) {
     bool intEqual = (lInt == rInt), floatEqual = (lFloat == rFloat), stringEqual = (lString == rString);
     bool intNotEqual = (lInt != rInt), floatNotEqual = (lFloat != rFloat), stringNotEqual = (lString != rString);
-    bool intLess = (lInt < rInt), floatLess = (lFloat < rFloat);
-    bool intLessEqual = (lInt <= rInt), floatLessEqual = (lFloat <= rFloat);
-    bool intGreater = (lInt > rInt), floatGreater = (lFloat > rFloat);
-    bool intGreaterEqual = (lInt >= rInt), floatGreaterEqual = (lFloat >= rFloat);
+    bool intLess = (lInt < rInt), floatLess = (lFloat < rFloat), stringLess = (lString < rString);
+    bool intLessEqual = (lInt <= rInt), floatLessEqual = (lFloat <= rFloat), stringLessEqual = (lString <= rString);
+    bool intGreater = (lInt > rInt), floatGreater = (lFloat > rFloat), stringGreater = (lString > rString);
+    bool intGreaterEqual = (lInt >= rInt), floatGreaterEqual = (lFloat >= rFloat), stringGreaterEqual = (lString >= rString);
     // 对其中一种数据类型判断时，输入的其余数据均相等
     if (cond == EQUAL) {
         return intEqual && floatEqual && stringEqual;
     } else if (cond == NOT_EQUAL) {
         return intNotEqual || floatNotEqual || stringNotEqual;
     } else if (cond == LESS) {
-        return intLess || floatLess;
+        return intLess || floatLess || stringLess;
     } else if (cond == LESS_EQUAL) {
-        return intLessEqual && floatLessEqual;
+        return intLessEqual && floatLessEqual && stringLessEqual;
     } else if (cond == GREATER) {
-        return intGreater || floatGreater;
+        return intGreater || floatGreater || stringGreater;
     } else if (cond == GREATER_EQUAL) {
-        return intGreaterEqual && floatGreaterEqual;
+        return intGreaterEqual && floatGreaterEqual && stringGreaterEqual;
     }
     return false;
 }

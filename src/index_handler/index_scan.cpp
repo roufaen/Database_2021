@@ -10,40 +10,51 @@ int IndexScan::getKey(char* key){
 
 void IndexScan::revaildate(){
     int index; //index is useless
-    currentNode = (BPlusNode*)tree->treeFile->getPage(nowPageId, index);
+    if(currentNodeId>0) currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+    if(currentOverflowPageId>0 && currentOverflowPage!=nullptr) 
+        currentOverflowPage = (BPlusOverflowPage*)tree->treeFile->getPage(currentOverflowPageId, index);
 }
 
 RID IndexScan::getValue(){
+    if (currentNodeId<=0) return RID{0,0};
+    revaildate();
+    // char* nowdata = new char[MAX_RECORD_LEN];
+    // getKey(nowdata);
+    // std::cout << currentNodeId << "GETVALUE" << *((int*)nowdata) << std::endl;
+    // std::cout << currentCumulation << " " << currentOverflowPageId << " " << currentValuePos << std::endl;
     if(currentNode->data[currentKeyPos].count == 1) return currentNode->data[currentKeyPos].value;
-    // std::cout << "Enter #0 " << currentValuePos << " " << currentNode->data[currentKeyPos].count << std::endl;
-    if(currentValuePos == 0 || currentOverflowPage == nullptr) {
+    if(currentOverflowPage == nullptr) {
         currentCumulation = 0;
-        // std::cout << "Enter #1 " << currentNode->data[currentKeyPos].value.pageID <<  std::endl;
         int index; //index is useless
-        nowPageId = currentNode->data[currentKeyPos].value.pageID;
-        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(nowPageId, index);
+        currentOverflowPageId = currentNode->data[currentKeyPos].value.pageID;
+        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPageId, index);
     }
     while(currentCumulation + currentOverflowPage->recs <= currentValuePos){
         currentCumulation += currentOverflowPage->recs;
-        // std::cout << "Enter #2 " << currentCumulation << " " << currentOverflowPage->recs << std::endl;
+        if(currentOverflowPage->recs == 0) {
+            cout << "Enter #2 " << currentOverflowPageId << " " << currentOverflowPage->recs << std::endl;
+            exit(-1);
+        }
         int index;//index is useless
-        nowPageId = currentOverflowPage->nextPage;
-        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(nowPageId, index);
+        currentOverflowPageId = currentOverflowPage->nextPage;
+        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPageId, index);
     }
 
     while(currentCumulation > currentValuePos){
-        currentCumulation -= currentOverflowPage->recs;
         // std::cout << "Enter #3 " << currentCumulation << " " << currentOverflowPage->recs << std::endl;
         int index;//index is useless
-        nowPageId = currentOverflowPage->prevPage;
-        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(nowPageId, index);
+        currentOverflowPageId = currentOverflowPage->prevPage;
+        currentOverflowPage = (BPlusOverflowPage*) tree->treeFile->getPage(currentOverflowPageId, index);
+        currentCumulation -= currentOverflowPage->recs;
     }
 
     return currentOverflowPage->data[currentValuePos - currentCumulation];
 }
 
 void IndexScan::next(){
+    revaildate();
     int c = currentNode->data[currentKeyPos].count;
+    // std::cout << "OVER 400 " << currentValuePos << " " << c << std::endl;
     if(currentValuePos < c - 1) currentValuePos++;
         else nextKey();
 }
@@ -51,21 +62,22 @@ void IndexScan::next(){
 void IndexScan::nextKey(){
     currentCumulation = 0;
     currentOverflowPage = nullptr;
-    int c=  currentNode-> recs;
+    revaildate();
+    int c =  currentNode->recs;
     if(currentKeyPos < c-1){
         currentKeyPos++;
         currentValuePos = 0;
     }else{
         int nextPage = currentNode -> nextPage;
-        if(nextPage <= 0) {
+        if(currentNodeId == tree->treeFile->header->lastLeaf) {
             currentNode = nullptr;
-            nowPageId = -1;
+            currentNodeId = -1;
             currentKeyPos = 0;
             currentValuePos = 0;
         }else {
             int index; //index is useless
-            nowPageId = nextPage;
-            this->currentNode = (BPlusNode*) tree->treeFile->getPage(nextPage, index);
+            currentNodeId = nextPage;
+            currentNode = (BPlusNode*) tree->treeFile->getPage(nextPage, index);
             currentKeyPos = 0;
             currentValuePos = 0;
         }
@@ -82,20 +94,22 @@ void IndexScan::previousKey(){
     currentOverflowPage = nullptr;
     if(currentKeyPos){
         currentKeyPos--;
-        currentValuePos = 0;
+        revaildate();
+        currentValuePos = currentNode->data[currentKeyPos].count - 1;
     }else{
         int prevPage = currentNode -> prevPage;
-        if(prevPage <= 0) {
+        //std::cout << "Prevpage is " << prevPage << " " << tree->treeFile->header->firstLeaf << std::endl;
+        if(currentNodeId == tree->treeFile->header->firstLeaf) {
             currentNode = nullptr;
-            nowPageId = -1;
+            currentNodeId = -1;
             currentKeyPos = 0;
             currentValuePos = 0;
         }else {
             int index; //index is useless
-            nowPageId = prevPage;
-            this->currentNode = (BPlusNode*) tree->treeFile->getPage(prevPage, index);
+            currentNodeId = prevPage;
+            currentNode = (BPlusNode*) tree->treeFile->getPage(prevPage, index);
             currentKeyPos = currentNode->recs - 1;
-            currentValuePos = 0;
+            currentValuePos = currentNode->data[currentKeyPos].count - 1;
         }
     }
 }
@@ -104,10 +118,22 @@ void IndexScan::setToBegin(){
     currentKeyPos = 0;
     currentValuePos = 0;
     currentCumulation = 0;
+    currentOverflowPageId = 0;
     currentOverflowPage = nullptr;
     int index; //index is useless
-    nowPageId = tree->treeFile->header->firstLeaf;
-    currentNode = (BPlusNode*)tree->treeFile->getPage(nowPageId, index);
+    currentNodeId = tree->treeFile->header->firstLeaf;
+    currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+}
+
+void IndexScan::setToEnd(){
+    currentCumulation = 0;
+    currentOverflowPageId = 0;
+    currentOverflowPage = nullptr;
+    int index; //index is useless
+    currentNodeId = tree->treeFile->header->lastLeaf;
+    currentNode = (BPlusNode*)tree->treeFile->getPage(currentNodeId, index);
+    currentKeyPos = currentNode->recs - 1;
+    currentValuePos = currentNode->data[currentKeyPos].count - 1;
 }
 
 bool IndexScan::equals(const IndexScan& that){

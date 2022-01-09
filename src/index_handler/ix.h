@@ -9,6 +9,7 @@
 typedef char* key_ptr;
 
 const int maxIndexPerPage = 400;
+const int maxIndexPerOVP = 1000;
 
 namespace ix{
     enum NodeType {INTERNAL, LEAF, OVRFLOW};
@@ -33,7 +34,7 @@ struct BPlusNode{
 };
 
 struct BPlusOverflowPage{
-    RID data[maxIndexPerPage];
+    RID data[maxIndexPerOVP];
     ix::NodeType nodeType;
     int pageId;
     int recs;

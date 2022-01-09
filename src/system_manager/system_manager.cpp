@@ -372,7 +372,7 @@ int SystemManager::createColumn(string tableName, TableHeader header, Data defau
         cerr << "Column " << header.headerName << " doesn't permit NULL, but default data is NULL. Operation failed." << endl;
         return -1;
     // 是否类型不符
-    } else if (defaultData.varType != header.varType && !((defaultData.varType == CHAR || defaultData.varType == VARCHAR) && (header.varType == CHAR || header.varType == VARCHAR))) {
+    } else if (defaultData.isNull == false && defaultData.varType != header.varType && !((defaultData.varType == CHAR || defaultData.varType == VARCHAR) && (header.varType == CHAR || header.varType == VARCHAR))) {
         if (defaultData.varType == INT && header.varType == FLOAT) {
             defaultData.varType = FLOAT;
             defaultData.floatVal = defaultData.intVal;
@@ -532,12 +532,12 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         cerr << "Column(s) you selected have duplicate elements. Operation failed." << endl;
         return -1;
     }
-
+    vector <RID> ridList = table->getRecordList();
     for (int i = 0; i < (int)headerNameList.size(); i++) {
         int find = 0;
         for (int j = 0; j < (int)headerList.size(); j++) {
             if (headerNameList[i] == headerList[j].headerName) {
-                // 不能同时为主键和外键
+                /*// 不能同时为主键和外键
                 if (headerList[j].isForeign == true) {
                     cerr << "Column " << headerList[j].headerName << " is already part of a foreign key. Operation failed." << endl;
                     return -1;
@@ -545,6 +545,13 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
                 } else if (headerList[j].permitNull == true) {
                     cerr << "Column " << headerList[j].headerName << " permits null. Operation failed." << endl;
                     return -1;
+                }*/
+                for (int k = 0; k < (int)ridList.size(); k++) {
+                    vector <Data> dataList = table->exeSelect(ridList[k]);
+                    if (dataList[j].isNull == true) {
+                        cerr << "Column " << headerList[j].headerName << " has null elements. Operation failed." << endl;
+                        return -1;
+                    }
                 }
                 find = 1;
                 break;
@@ -557,6 +564,27 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         }
     }
 
+    /*// 添加主键标记并创建索引
+    for (int i = 0; i < (int)headerNameList.size(); i++) {
+        for (int j = 0; j < (int)headerList.size(); j++) {
+            if (headerNameList[i] == headerList[j].headerName) {
+                headerList[j].isPrimary = true;
+                if (headerList[j].isUnique == false && headerList[j].hasIndex == false) {
+                    opCreateIndex(tableName, headerList[j].headerName);
+                }
+                //headerList[j].id = i;
+            }
+        }
+    }
+    table->writeHeaderList(headerList);*/
+    opCreatePrimary(tableName, headerNameList);
+
+    return 0;
+}
+
+void SystemManager::opCreatePrimary(string tableName, vector <string> headerNameList) {
+    Table *table = getTable(tableName);
+    vector <TableHeader> headerList = table->getHeaderList();
     // 添加主键标记并创建索引
     for (int i = 0; i < (int)headerNameList.size(); i++) {
         for (int j = 0; j < (int)headerList.size(); j++) {
@@ -570,8 +598,6 @@ int SystemManager::createPrimary(string tableName, vector <string> headerNameLis
         }
     }
     table->writeHeaderList(headerList);
-
-    return 0;
 }
 
 int SystemManager::dropPrimary(string tableName, vector <string> headerNameList) {
@@ -1088,6 +1114,9 @@ void SystemManager::opCreateIndex(string tableName, string headerName) {
     VarType type = headerList[idxPos].varType == DATE ? INT : (headerList[idxPos].varType == CHAR ? VARCHAR : headerList[idxPos].varType);
     this->indexHandler->openIndex("index_" + getDbName() + "_" + tableName, headerName, type);
     for (int i = 0; i < (int)ridList.size(); i++) {
+        /*if (i % 10000 == 0) {
+            cout << i << endl;
+        }*/
         vector <Data> dataList = table->exeSelect(ridList[i]);
         if (dataList[idxPos].isNull == false) {
             key_ptr keyPtr;
@@ -1108,7 +1137,7 @@ void SystemManager::opCreateIndex(string tableName, string headerName) {
 }
 
 void SystemManager::opDropIndex(string tableName, string headerName) {
-    this->indexHandler->removeIndex(tableName, headerName);
+    this->indexHandler->removeIndex("index_" + getDbName() + "_" + tableName, headerName);
 }
 
 RID SystemManager::opInsert(string tableName, vector <Data> dataList) {

@@ -4,7 +4,7 @@ NameHandler::NameHandler(BufManager *bufManager) {
     this->bufManager = bufManager;
     this->recordHandler = new RecordHandler(bufManager);
     if (this->recordHandler->openFile("header.dat") == -1) {
-        this->recordHandler->createFile("header.dat");
+        this->recordHandler->createFile("header.dat", MAX_RECORD_LEN);
         this->recordHandler->openFile("header.dat");
         this->elementNameList.clear();
         writeElementList(this->elementNameList);
@@ -18,7 +18,7 @@ NameHandler::NameHandler(BufManager *bufManager, string dbName) {
     this->bufManager = bufManager;
     this->recordHandler = new RecordHandler(bufManager);
     if (this->recordHandler->openFile("header_" + dbName + ".dat") == -1) {
-        this->recordHandler->createFile("header_" + dbName + ".dat");
+        this->recordHandler->createFile("header_" + dbName + ".dat", MAX_RECORD_LEN);
         this->recordHandler->openFile("header_" + dbName + ".dat");
         this->elementNameList.clear();
         writeElementList(this->elementNameList);

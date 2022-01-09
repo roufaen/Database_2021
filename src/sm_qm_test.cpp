@@ -156,11 +156,11 @@ void testSingleTable() {
     vecString[0].clear();  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");  vecString[0].push_back("teacher");
     vecString[1].clear();  vecString[1].push_back("id");  vecString[1].push_back("name");  vecString[1].push_back("data");
     vecCondition.clear();
-    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
+    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10001, 0});
     assert(queryManager->exeDelete("teacher", vecCondition) == 0);
     vecResult.clear();
     vecCondition.clear();
-    vecCondition.push_back(Condition{GREATER_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
+    vecCondition.push_back(Condition{LESS_EQUAL, INT, false, false, "teacher", "", "id", "", "", 10000, 0});
     assert(queryManager->exeSelect(vecString[0], vecString[1], vecCondition, vecResult) == 0);
     cout << "[--check--] There should be nothing below." << endl;
     for (int i = 0; i < (int)vecResult.size(); i++) {

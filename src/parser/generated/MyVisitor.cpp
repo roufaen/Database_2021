@@ -5,14 +5,22 @@
 VarType getVarType(SQLParser::Type_Context* tc, int& len){
     int type = tc->getAltNumber();
     switch(type){
-        case 1: len=4;
+        case 1: {
+            len=4;
             return INT;
-        case 2: len=getValue<int>(tc->Integer()->getText());
+        }
+        case 2: {
+            len=getValue<int>(tc->Integer()->getText());
             return VARCHAR;
-        case 3: len=4;
+        }
+        case 3: {
+            len=4;
             return FLOAT;
-        case 4: len=4;
+        }
+        case 4: {
+            len=4;
             return DATE;
+        }
     }
     len=0;
     return VARCHAR;
@@ -25,6 +33,8 @@ ConditionType getCondType(SQLParser::OperateContext* oc){
     if(oc->LessEqual()) return ConditionType::LESS_EQUAL;
     if(oc->Greater()) return ConditionType::GREATER;
     if(oc->GreaterEqual()) return ConditionType::GREATER_EQUAL;
+    if(oc->Is()) return ConditionType::IS;
+    if(oc->IsNot()) return ConditionType::ISNOT;
     return ConditionType::IN;
 }
 
@@ -37,6 +47,7 @@ Type getValue(const string& str){
 }
 
 bool getFromValue(Data& dt, SQLParser::ValueContext* data){
+    dt.isNull = false;
     if(data->Float())
     { 
         dt.floatVal = getValue<float>(data->Float()->getText());
@@ -52,12 +63,17 @@ bool getFromValue(Data& dt, SQLParser::ValueContext* data){
     if(data->Date())
     {
         if(isDate(data->Date()->getText(), dt.intVal)) dt.varType = DATE;
-        else dt.stringVal = data->Date()->getText();
+        else {
+            dt.stringVal = data->Date()->getText();
+            dt.varType = VARCHAR;
+        }
         return true;
     }
     if(data->String())
     { 
         dt.stringVal = data->String()->getText();
+        int len = dt.stringVal.length();
+        dt.stringVal = dt.stringVal.substr(1, len-2);
         dt.varType = VARCHAR;
         return true;
     }
@@ -91,7 +107,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     auto t_j = colName.begin();
     vector<int> len;
     while(t_i!=tableName.end() && t_j!=colName.end()){
-        len.push_back((*t_i).length() + (*t_j).length());
+        len.push_back((*t_i).length() + 1 + (*t_j).length());
         t_i++; t_j++;
     }
     for(auto dt:data){
@@ -105,8 +121,10 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 len[index] = max(len[index], getNumLen(d.intVal));
                 break;
             case FLOAT:
-                double ftval = (d.floatVal < 0) ? -d.floatVal : d.floatVal;
-                len[index] = max(len[index], (ftval>999999?getNumLen(ftval):7)+(d.floatVal<0));
+                {
+                    double ftval = (d.floatVal < 0) ? -d.floatVal : d.floatVal;
+                    len[index] = max(len[index], (ftval>999999?getNumLen(ftval):7)+(d.floatVal<0));
+                }
                 break;
             case VARCHAR:
             case CHAR:
@@ -134,7 +152,7 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<"|";
     for(int i=0; i<num_of_col; i++)
     {
-        std::cout<<setw(len[i])<<(tableName[i] + "." + colName[i]);
+        std::cout << setw(len[i]) << setiosflags(ios::left) <<(tableName[i] + "." + colName[i]);
         std::cout<<"|";
     }
     std::cout << std::endl;
@@ -146,8 +164,8 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
        std::cout<<"+";
     }
     std::cout<<std::endl;
-    std::cout << "|";
     for(auto dt:data){
+        std::cout << "|";
         int index = 0;
         for(auto d:dt){
             if(d.isNull) std::cout << setw(len[index]) << setiosflags(ios::left) << "NULL";
@@ -159,7 +177,13 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 break;
             case DATE:
                 {
-                    string str = std::to_string(d.intVal/10000) + "-" + std::to_string((d.intVal/100)%100) + "-" + std::to_string(d.intVal%100);
+                    string str = std::to_string(d.intVal/10000) + "-" ;
+                    int mt = (d.intVal/100)%100;
+                    if(mt<10) str += "0";
+                    str += std::to_string((d.intVal/100)%100) + "-";
+                    int dt = d.intVal % 100;
+                    if(dt<10) str += "0";
+                    str += std::to_string(d.intVal%100);
                     std::cout << setw(len[index]) << setiosflags(ios::left) << str;
                 }
                 break;
@@ -175,10 +199,10 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
                 break;
             }
             index++;
+            std::cout << "|";
         }
-        std::cout << "|";
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
     std::cout<<"+";
     for(int i=0; i<num_of_col; i++)
     {
@@ -189,7 +213,100 @@ void print(const vector<string>& tableName, const vector<string>& colName, const
     std::cout<<std::endl;
 }
 
-bool isDate(string& dateStr, int& date){
+void print(const vector<string>& tableName,  const vector<vector<string>>& data){
+    auto t_i = tableName.begin();
+    vector<int> len;
+    while(t_i!=tableName.end()){
+        len.push_back((*t_i).length());
+        t_i++;
+    }
+    for(auto dt:data){
+        int index = 0;
+        for(auto d:dt){ 
+            len[index] = max(len[index], d.length());
+            index++;
+        }
+    }
+    int num_of_col = tableName.size();
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+    std::cout<<"|";
+    for(int i=0; i<num_of_col; i++)
+    {
+        std::cout << setw(len[i]) << setiosflags(ios::left) <<tableName[i];
+        std::cout<<"|";
+    }
+    std::cout << std::endl;
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+    for(auto dt:data){
+        std::cout << "|";
+        int index = 0;
+        for(auto d:dt){
+            std::cout << setw(len[index]) << setiosflags(ios::left) << d;
+            index++;
+            std::cout << "|";
+        }
+        std::cout << std::endl;
+    }
+    std::cout<<"+";
+    for(int i=0; i<num_of_col; i++)
+    {
+        for(int j=0; j<len[i]; j++)
+            std::cout<<"-";
+       std::cout<<"+";
+    }
+    std::cout<<std::endl;
+}
+
+void print(const string tableName, const vector<string>& data){
+    if(!data.size()) {
+        std::cout << "Sorry, but we found no " << tableName << "!" << std::endl;
+        return;
+    }
+    int len = tableName.length();
+    for(auto dt:data){ 
+        len = max(len, dt.length());
+    }
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+    std::cout<<"|";
+    std::cout<<setw(len)<<(tableName);
+    std::cout<<"|";
+    std::cout << std::endl;
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+    for(auto dt:data){
+        std::cout << "|" << setw(len) << setiosflags(ios::left) << dt;
+        std::cout << "|" << std::endl;;
+    }
+    std::cout<<"+";
+    for(int j=0; j<len; j++)
+        std::cout<<"-";
+    std::cout<<"+";
+    std::cout<<std::endl;
+}
+
+
+bool isDate(string dateStr, int& date){
     int yr = getValue<int>(dateStr.substr(0, 4));
     int mt = getValue<int>(dateStr.substr(5, 2));
     int dt = getValue<int>(dateStr.substr(8, 2));
@@ -219,5 +336,6 @@ bool isDate(string& dateStr, int& date){
         default:
             return false;
     }
+    date = yr*10000+mt*100+dt;
     return true;
 }

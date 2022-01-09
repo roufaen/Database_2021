@@ -1,17 +1,17 @@
 #include "index_handler.h"
 
-int getLen(key_ptr key, VarType _type){
+int getLen(key_ptr key, VarType _type, int size=0){
     switch (_type){
-        case FLOAT: return 4;
-        case INT: return 4;
-        case VARCHAR: return strlen(key);
+        case FLOAT: return sizeof(double);
+        case INT: return sizeof(int);
+        case VARCHAR: return ((size==0) ? 256 : strlen(key) ) *sizeof(char);
         default: return 0;
     }
 }
 int compare(VarType _type, key_ptr a, char* b){
     switch (_type) {
         case FLOAT: {
-            float diff = (*(float*)a - *(float*) b);
+            double diff = (*(double*)a - *(double*) b);
             return (diff>0)?1:(diff==0)?0:-1;
         }
         case INT: {
@@ -34,14 +34,14 @@ int compare(VarType _type, key_ptr a, char* b){
     return 0;
 }
 
-void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type){
+void IndexHandler::openIndex(std::string _tableName, std::string _colName, VarType _type, int len){
     tableName = _tableName;
     colName = _colName;
     type = _type;
     std::string treeFileName = tableName + colName + ".tree";
     std::string keyFileName = tableName + colName + ".key";
     if (keyFile->openFile(keyFileName) == -1) { //Still some bugs left, is record_hdl able to deal with no file? SHOULD HAVE BEEN FIXED
-        keyFile->createFile(keyFileName);
+        keyFile->createFile(keyFileName, getLen(nowdata, _type, len));
         keyFile->openFile(keyFileName);
     }
     treeFile->openFile(treeFileName.c_str());
@@ -186,7 +186,8 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
     IndexScan it = lowerBound(key);
     if(it.available()) {
         it.getKey(nowdata);
-        if(compare(type, key, nowdata) == -1) it.nextKey();
+        std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
+        if(compare(type, key, nowdata) == 1) it.nextKey();
     }
     else it.setToBegin();
     return it;
@@ -199,17 +200,13 @@ IndexScan IndexHandler::lesserBound(key_ptr key){ //Strictly small
         it.getKey(nowdata);
         if(compare(type, key, nowdata) == 0) it.previousKey();
     }
-    else it.setToBegin();
     return it;
 }
 
 IndexScan IndexHandler::greaterBound(key_ptr key){ //Strictly big
     if(totalCount() == 0) return IndexScan(this);
-    IndexScan it = upperBound(key);
-    if(it.available()) {
-        it.getKey(nowdata);
-        if(compare(type, key, nowdata) == 0) it.nextKey();
-    }
+    IndexScan it = lowerBound(key);
+    if(it.available()) it.nextKey();
     else it.setToBegin();
     return it;
 }
@@ -263,13 +260,15 @@ vector<RID> IndexHandler::getRIDs(key_ptr key){
     IndexScan lb = lowerBound(key);  
     if(!lb.available()) return ret;
     
+    lb.getKey(nowdata);
+    if(compare(type, key, nowdata) != 0) return ret;
+
     IndexScan hb = lb;
     hb.nextKey();
     
-    if(lb.available() && compare(type, key, nowdata) != 0) return ret;
-    
     while(lb.available() && !lb.equals(hb)){
         ret.push_back(lb.getValue());
+        lb.revaildate();
         lb.next();
     }
     return ret;
@@ -419,13 +418,13 @@ void IndexHandler::insertIntoOverflowPage(key_ptr key, RID rid, BPlusNode* fa, i
     } else {
         int pageIndex;
         BPlusOverflowPage* page = (BPlusOverflowPage*)treeFile->getPage(fa->data[index].value.pageID, pageIndex);
-        while((page->nextPage) && (page->recs == maxIndexPerPage)) //TO BE FIEXED maxKeyperOverflowPage
+        while((page->nextPage) && (page->recs == maxIndexPerOVP)) //TO BE FIEXED maxKeyperOverflowPage
         {
             page = (BPlusOverflowPage*)treeFile->getPage(page->nextPage, pageIndex);
         }
-        if(page->recs == maxIndexPerPage) {
+        if(page->recs == maxIndexPerOVP) {
             int newIndex;
-            BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex);
+            BPlusOverflowPage* newOP = (BPlusOverflowPage*)treeFile->newPage(newIndex, true);
             newOP->nodeType = ix::NodeType::OVRFLOW;
             newOP->nextPage = 0;
             newOP->prevPage = page->pageId;

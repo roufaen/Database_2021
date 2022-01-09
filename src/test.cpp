@@ -3,14 +3,21 @@
 
 unsigned char MyBitMap::ha[] = {0};
 int main(){
+    //system("rm -rf *.dat *.key *.tree");
+    MyBitMap::initConst();
     BufManager* bm = new BufManager();
-    RecordHandler* rh = new RecordHandler(bm);
     IndexHandler* ih = new IndexHandler(bm);
     SystemManager* sm = new SystemManager(ih, bm);
     QueryManager* qm = new QueryManager(ih, sm, bm);
-    std::string command;
-    while(getline(cin, command)){
-        parse(command, qm, rh, ih, sm);
+    std::cout<<"$> ";
+    std::string command = "";
+    std::string lineStr;
+    while(getline(cin, lineStr)){
+        if(lineStr.find(";") != string::npos) {
+            parse(command + lineStr, qm, ih, sm);
+            std::cout<<"$> ";
+            command = "";
+        } else command = command + lineStr;
     }
     return 0;
 }

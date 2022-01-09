@@ -7,7 +7,7 @@
 
 using namespace std;
 
-enum ConditionType { EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, IN };
+enum ConditionType { EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, IN, IS, ISNOT };
 
 struct Condition {
     enum ConditionType condType;

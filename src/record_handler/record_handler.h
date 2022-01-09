@@ -1,7 +1,7 @@
 # ifndef RECORD_HANDLER_H
 # define RECORD_HANDLER_H
 
-# include "../utils/RID.h"
+# include "../utils/rid.h"
 # include "../utils/file_header.h"
 # include "../utils/pagedef.h"
 # include "../buf_manager/buf_manager.h"
@@ -15,7 +15,7 @@ class RecordHandler {
 public:
     RecordHandler(BufManager *bufManager);
     ~RecordHandler();
-    int createFile(string fileName);                                                  // 创建文件
+    int createFile(string fileName, int len);                                         // 创建文件
     int destroyFile(string fileName);                                                 // 删除文件
     int openFile(string fileName);                                                    // 通过缓存管理模块打开文件，并获取其句柄
     int closeFile();                                                                  // 关闭fileID对应文件
