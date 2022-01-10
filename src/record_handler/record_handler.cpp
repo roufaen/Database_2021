@@ -115,6 +115,22 @@ int RecordHandler::getRecord(const RID &rid, char *pData) {
     }
 }
 
+char* RecordHandler::getFilePoint(const RID& rid, int& index){
+    if(this->fileID == -1){
+        return nullptr;
+        index = -1;
+    } else {
+        index = -1;
+        BufType page = this->bufManager->getPage(this->fileID, rid.pageID, index);
+        if ((page[this->header.slotMapOffset + rid.slotID / 8] & (1 << (rid.slotID % 8))) == 0) {
+            return nullptr;
+        } else {
+            page += rid.slotID * this->header.recordSize;
+        }
+        return page;
+    } 
+}
+
 int RecordHandler::deleteRecord(const RID &rid) {
     if (this->fileID == -1) {
         return -1;

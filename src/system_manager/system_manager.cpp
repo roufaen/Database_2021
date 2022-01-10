@@ -1258,6 +1258,39 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
                             foreignDataList[refPos[k]].refCount += delta;
                         }
                     }
+                    {
+                        int index;
+                        auto headerList = foreignTable->getHeaderList();
+                        char* ptr = foreignTable->getFilePoint(ridList[j], index);
+                        for (int i = 0, size = foreignDataList.size(); i < size; i++) {
+                            int siz = headerList[i].varType == VARCHAR ? foreignDataList[i].stringVal.size() : headerList[i].len;
+                            if (foreignDataList[i].isNull == true) {
+                                siz = 0;
+                            }
+                            memcpy(ptr, &siz, sizeof(int));
+                            ptr += sizeof(int);
+                            memcpy(ptr, &foreignDataList[i].refCount, sizeof(int));
+                            ptr += sizeof(int);
+
+                            if (foreignDataList[i].isNull == true) {
+                                ptr += 0;
+                            } else if (headerList[i].varType == CHAR) {
+                                memcpy(ptr, foreignDataList[i].stringVal.c_str(), headerList[i].len);
+                                ptr += headerList[i].len;
+                            } else if (headerList[i].varType == VARCHAR) {
+                                memcpy(ptr, foreignDataList[i].stringVal.c_str(), foreignDataList[i].stringVal.size());
+                                ptr += foreignDataList[i].stringVal.size();
+                            } else if (headerList[i].varType == INT || headerList[i].varType == DATE) {
+                                memcpy(ptr, &foreignDataList[i].intVal, sizeof(int));
+                                ptr += sizeof(int);
+                            } else if (headerList[i].varType == FLOAT) {
+                                memcpy(ptr, &foreignDataList[i].floatVal, sizeof(double));
+                                ptr += sizeof(double);
+                            }
+                        }
+                        if(index>=0) bufManager->markDirty(index);
+                    }
+                    /*
                     RID foreignNewRid = foreignTable->exeUpdate(foreignDataList, ridList[j]);
                     for (int k = 0; k < (int)refPos.size(); k++) {
                         if (refPos[k] != -1) {
@@ -1281,6 +1314,7 @@ void SystemManager::foreignKeyProcess(vector <TableHeader> headerList, vector <D
                             }
                         }
                     }
+                    */
                 }
             }
         }
