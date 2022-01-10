@@ -15,7 +15,7 @@ class QueryManager {
 public:
     QueryManager(IndexHandler *indexHandler, SystemManager *systemManager, BufManager *bufManager);
     ~QueryManager();
-    // 输入 < 表名, 列名 > ，筛选条件，输出结果保存在 resData 中，数据顺序与输入要求一致，从多表中查询即为连接
+    // 从 tableNameList 中读取数据， selectorList 中每三个元素分别为 tableName headerName aggregator ， conditionList 为条件列表， aggregation 标记是否聚集查询， resData 保存返回数据
     int exeSelect(vector <string> tableNameList, vector <pair <pair <string, string>, string> > selectorList, vector <Condition> conditionList, bool aggregation, vector <vector <Data> >& resData);
     // 向名为 tableName 的表中插入一条数据 dataList
     int exeInsert(string tableName, vector <Data> dataList);
@@ -25,8 +25,6 @@ public:
     int exeDelete(string tableName, vector <Condition> conditionList);
     // 在名为 tableName 的表中更新数据，修改 updateHeaderNameList 中的列，每列数据修改为 updateDataList 中对应列的数据，筛选条件为 conditionList
     int exeUpdate(string tableName, vector <string> updateHeaderNameList, vector <Data> updateDataList, vector <Condition> conditionList);
-    // 聚集查询， aggregatorList 和 aggregateHeaderList 的长度需要一致，若出现 COUNT(*) 的情况则需要填充，填充内容随意
-    //int exeAggregationSelect(string tableName, vector <string> aggregatorList, vector <string> aggregateHeaderList, vector <Condition> conditionList);
 
 private:
     // 对两组 data 输出比较结果，要求对于不比较的内容输入必须相同，例如希望比较 lInt 和 rInt 则 lFloat 和 rFloat 必须相等且 lString 和 rString 必须相等

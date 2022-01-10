@@ -97,9 +97,7 @@ class MyVisitor: public SQLBaseVisitor {
     ifstream inFile(fileID, ios::in);
     string lineStr;
     std::vector<Data> datalist;
-    int accumulate = 0;
     while (getline(inFile, lineStr)){
-      //std::cout << (accumulate++) << std::endl;
       datalist.clear();
       istringstream sin(lineStr);
       string field;
@@ -189,7 +187,7 @@ class MyVisitor: public SQLBaseVisitor {
               std::string foreignTable = pointer->Identifier()->getText();
               auto selfid= pointer->identifiers(0)->Identifier();
               auto othid = pointer->identifiers(1)->Identifier();
-              for(int i = 0; i < selfid.size(); i++){
+              for(int i = 0; i < (int)selfid.size(); i++){
                   th.foreignHeaderName = othid[i]->getText();
                   th.foreignTableName = foreignTable;
                   th.headerName = selfid[i]->getText();
@@ -429,7 +427,7 @@ class MyVisitor: public SQLBaseVisitor {
     identifiers.clear();
     if(ctx->identifiers()){
       auto id = ctx->identifiers()->Identifier();
-      for(int i=0; i<id.size(); i++)
+      for(int i = 0; i < (int)id.size(); i++)
         identifiers.push_back(id[i]->getText());
     }
     sm->dropPrimary(ctx->Identifier()->getText(), identifiers);
@@ -485,7 +483,7 @@ class MyVisitor: public SQLBaseVisitor {
     th.tableName = tableName;
     std::vector<TableHeader> headerName;
     headerName.clear();
-    for(int i = 0; i < selfid.size(); i++){
+    for(int i = 0; i < (int)selfid.size(); i++){
       th.foreignHeaderName = othid[i]->getText();
       th.foreignTableName = foreignTable;
       th.headerName = selfid[i]->getText();

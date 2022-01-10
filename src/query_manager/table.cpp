@@ -235,3 +235,7 @@ int Table::writeHeaderList(vector <TableHeader> headerList) {
 string Table::getTableName() {
     return this->tableName;
 }
+
+char* Table::getFilePoint(const RID& rid, int& index){
+    return this->recordHandler->getFilePoint(rid, index);
+}

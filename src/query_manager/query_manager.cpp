@@ -55,19 +55,6 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
 
     // 解决 INT 和 FLOAT 的区别问题
     for (int i = 0; i < (int)conditionList.size(); i++) {
-        /*if (!this->systemManager->hasTable(conditionList[i].leftTableName)) {
-            cerr << "Table " << conditionList[i].leftTableName << " doesn't exist. Operation failed." << endl;
-            return -1;
-        } else if (conditionList[i].useColumn == true && !this->systemManager->hasTable(conditionList[i].rightTableName)) {
-            cerr << "Table " << conditionList[i].rightTableName << " doesn't exist. Operation failed." << endl;
-            return -1;
-        }
-        wholeTableNameList.push_back(conditionList[i].leftTableName);
-        wholeSelectorNameList.push_back(conditionList[i].leftCol);
-        if (conditionList[i].useColumn == true) {
-            wholeTableNameList.push_back(conditionList[i].rightTableName);
-            wholeSelectorNameList.push_back(conditionList[i].rightCol);
-        } else {*/
         Table *leftTable = this->systemManager->getTable(conditionList[i].leftTableName);
         vector <TableHeader> leftTableHeader = leftTable->getHeaderList();
         for (int j = 0; j < (int)leftTableHeader.size(); j++) {
@@ -77,22 +64,16 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
                 break;
             }
         }
-        //}
     }
 
     // 获取用到的所有 table ，其 header 进行连接
     for (int i = 0; i < (int)tableNameList.size(); i++) {
-        //if (tableMap.count(wholeTableNameList[i]) == 0) {
-        //    tableMap[wholeTableNameList[i]] = tableList.size();
         Table *table = this->systemManager->getTable(tableNameList[i]);
         tableList.push_back(table);
         vector <TableHeader> headerList = table->getHeaderList();
         jointHeaderList.insert(jointHeaderList.end(), headerList.begin(), headerList.end());
         vector <RID> ridList = table->getRecordList(), conditionRidList;
         for (int j = 0; j < (int)conditionList.size(); j++) {
-            /*if (conditionList[j].useColumn == true || conditionList[j].rightNull == true) {
-                continue;
-            }*/
             // 用索引判断
             for (int k = 0; k < (int)headerList.size(); k++) {
                 if (conditionList[j].useColumn == false && conditionList[j].rightNull == false && (headerList[k].isPrimary == true || headerList[k].isUnique == true || headerList[k].hasIndex == true)
@@ -161,7 +142,6 @@ int QueryManager::exeSelect(vector <string> tableNameList, vector <pair <pair <s
         }
         ridLists.push_back(ridList);
         totNum *= ridList.size();
-        //}
     }
 
     // data 进行连接
@@ -314,9 +294,6 @@ int QueryManager::exeInsert(string tableName, vector <Data> dataList, RID& rid) 
             maxGroup = headerList[i].uniqueGroup > maxGroup ? headerList[i].uniqueGroup : maxGroup;
         }
     }
-    /*for (int i = 0; i < (int)ridList.size(); i++) {
-        dataLists.push_back(table->exeSelect(ridList[i]));
-    }*/
     for (int i = 0; i < (int)headerList.size(); i++) {
         if (headerList[i].isForeign == true && dataList[i].isNull == false) {
             // 外键不能引用不存在的键
@@ -538,19 +515,6 @@ int QueryManager::exeUpdate(string tableName, vector <string> updateHeaderNameLi
     return 0;
 }
 
-/*int QueryManager::exeAggregationSelect(string tableName, string groupHeaderName, bool group, vector <string> aggregatorList, vector <string> aggregateHeaderList, vector <Condition> conditionList) {
-    // 判断 table 是否存在
-    if (!this->systemManager->hasTable(tableName)) {
-        cerr << "Table " << tableName << " doesn't exist. Operation failed." << endl;
-        return -1;
-    }
-    Table *table = this->systemManager->getTable(tableName);
-    vector <TableHeader> headerList = table->getHeaderList();
-    vector <RID> ridList = table->getRecordList();
-    if ()
-    return 0;
-}*/
-
 bool QueryManager::compare(int lInt, double lFloat, string lString, int rInt, double rFloat, string rString, ConditionType cond) {
     bool intEqual = (lInt == rInt), floatEqual = (lFloat == rFloat), stringEqual = (lString == rString);
     bool intNotEqual = (lInt != rInt), floatNotEqual = (lFloat != rFloat), stringNotEqual = (lString != rString);
@@ -710,75 +674,4 @@ bool QueryManager::judgeUnique(string tableName, vector <string> judgeHeaderList
     }
 
     return true;
-
-    /*if ((headerList[j].isPrimary == true || headerList[j].isUnique == true) && dataList[j].isNull == false) {
-            // 检查是否满足 unique 要求
-                
-            for (int j = 0; j < (int)dataLists.size(); j++) {
-                if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataList[i].intVal == dataLists[j][i].intVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                } else if (headerList[i].varType == FLOAT && dataList[i].floatVal == dataLists[j][i].floatVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataList[i].stringVal == dataLists[j][i].stringVal && dataLists[j][i].isNull == false) {
-                    cerr << "Column " << headerList[i].headerName << " duplicates. Operation failed." << endl;
-                    return -1;
-                }
-            }
-        }*/
 }
-
-
-    /*// 判断 Unique 冲突
-    for (int i = 0; i < (int)headerList.size(); i++) {
-        if (updatePos[i] == true && (headerList[i].isPrimary == true || headerList[i].isUnique == true)) {
-            // 多个数据相同，冲突
-            if (dataLists.size() > 1) {
-                return -1;
-            // 只有一个数据修改
-            } else if (dataLists[0][i].isNull == false) {
-                int counter = 0;
-                for (int j = 0; j < (int)ridList.size(); j++) {
-                    vector <Data> dataList = table->exeSelect(ridList[j]);
-                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
-                        counter++;
-                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
-                        counter++;
-                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
-                        counter++;
-                    }
-                }
-                // 若修改后的数值本不存在，则可直接修改，否则判断修改前后数值是否一样，若不一样则说明有冲突
-                if (counter != 0) {
-                    if ((headerList[i].varType == INT || headerList[i].varType == DATE) && dataLists[0][i].intVal != updateDataList[i].intVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    } else if (headerList[i].varType == FLOAT && dataLists[0][i].floatVal != updateDataList[i].floatVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    } else if ((headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) && dataLists[0][i].stringVal != updateDataList[i].stringVal) {
-                        cerr << "There would be duplicate elements at column " << headerList[i].headerName << " . Operation failed." << endl;
-                        return -1;
-                    }
-                }
-            }
-        }
-    }
-
-    // 判断外键冲突
-    for (int i = 0; i < (int)headerList.size(); i++) {
-        if (updatePos[i] == true && headerList[i].isForeign == true && updateDataList[i].isNull == false) {
-            // 外键不能引用不存在的键
-            if (foreignKeyExistJudge(headerList[i], updateDataList[i])) {
-                if (headerList[i].varType == INT || headerList[i].varType == DATE) {
-                    cerr << "Foreign key " << updateDataList[i].intVal << " doesn't exist. Operation failed." << endl;
-                } else if (headerList[i].varType == FLOAT) {
-                    cerr << "Foreign key " << updateDataList[i].floatVal << " doesn't exist. Operation failed." << endl;
-                } else if (headerList[i].varType == CHAR || headerList[i].varType == VARCHAR) {
-                    cerr << "Foreign key " << updateDataList[i].stringVal << " doesn't exist. Operation failed." << endl;
-                }
-                return -1;
-            }
-        }
-    }*/

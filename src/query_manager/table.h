@@ -14,6 +14,7 @@ public:
     Table(string dbName, string tableName, BufManager *bufManager);
     Table(string dbName, string tableName, BufManager *bufManager, vector <TableHeader> headerList);
     ~Table();
+    //或许可以调用recordHandler中的header而不用如cpp中一样进行读文件后的逐个处理？
     vector <TableHeader> getHeaderList();
     int writeHeaderList(vector <TableHeader> headerList);
     vector <Data> exeSelect(RID rid);
@@ -22,6 +23,7 @@ public:
     RID exeUpdate(vector <Data> data, RID rid);
     vector <RID> getRecordList();
     string getTableName();
+    char* getFilePoint(const RID& rid, int& index);
 
 private:
     RecordHandler *recordHandler;

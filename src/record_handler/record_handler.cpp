@@ -54,10 +54,6 @@ int RecordHandler::openFile(string fileName) {
             availablePage.pop();
         }
         for (int i = 1; i <= this->header.pageNum; i++) {
-            /*cout << i << endl;
-            if (i == 60083) {
-                cout << i;
-            }*/
             BufType page = this->bufManager->getPage(this->fileID, i, idx);
             this->bufManager->access(idx);
             int occupiedNum = 0;
@@ -113,6 +109,22 @@ int RecordHandler::getRecord(const RID &rid, char *pData) {
         memcpy(pData, page + rid.slotID * this->header.recordSize, this->header.recordSize);
         return 0;
     }
+}
+
+char* RecordHandler::getFilePoint(const RID& rid, int& index){
+    if(this->fileID == -1){
+        return nullptr;
+        index = -1;
+    } else {
+        index = -1;
+        BufType page = this->bufManager->getPage(this->fileID, rid.pageID, index);
+        if ((page[this->header.slotMapOffset + rid.slotID / 8] & (1 << (rid.slotID % 8))) == 0) {
+            return nullptr;
+        } else {
+            page += rid.slotID * this->header.recordSize;
+        }
+        return page;
+    } 
 }
 
 int RecordHandler::deleteRecord(const RID &rid) {

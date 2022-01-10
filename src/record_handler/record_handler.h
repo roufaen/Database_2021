@@ -26,6 +26,7 @@ public:
     RID insertRecord(const char *pData, int len = MAX_RECORD_LEN);                    // 将字节序列pData插入特定位置
     RID updateRecord(const RID &rid, const char *pData, int len = MAX_RECORD_LEN);    // 将特定位置记录更新为字节序列pData
     vector <RID> getRecordList();
+    char* getFilePoint(const RID& rid, int& index);
 
 private:
     BufManager *bufManager;

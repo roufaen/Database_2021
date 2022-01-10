@@ -28,6 +28,6 @@ file(GLOB antlr4-cpp-src
 )
 
 add_library(${CMAKE_PROJECT_NAME}_lib ${SOURCE} ${HEADERS} ${antlr4-cpp-src})
-add_executable(${CMAKE_PROJECT_NAME} test.cpp)
+add_executable(${CMAKE_PROJECT_NAME} main.cpp)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}  ${CMAKE_PROJECT_NAME}_lib )
