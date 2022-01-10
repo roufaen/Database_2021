@@ -28,8 +28,6 @@ public:
     void remove(key_ptr key, RID rid);
     bool has(key_ptr key);
     int count(key_ptr key);
-    int lesserCount(key_ptr key); //Strictly
-    int greaterCount(key_ptr key); //Strictly
     IndexScan begin();
     IndexScan lesserBound(key_ptr key); //Strictly
     IndexScan greaterBound(key_ptr key); //Strictly
@@ -63,8 +61,6 @@ private:
     void deleteFromOverflowPage(key_ptr key, RID rid, BPlusNode* fatherPage, int x);
 
     int getCountIn(int pageID, key_ptr key);
-    int getLesserCountIn(int pageID, key_ptr key);
-    int getGreaterCountIn(int pageID, key_ptr key);
     IndexScan getLowerBound(int pageID, key_ptr key);
 
     inline std::string getKeyFilename() {return tableName + colName + ".tree";}

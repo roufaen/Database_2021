@@ -162,14 +162,6 @@ int IndexHandler::count(key_ptr key){
     return ret;
 }
 
-int IndexHandler::lesserCount(key_ptr key){
-    return getLesserCountIn(treeFile->header->rootPageId, key);
-}
-
-int IndexHandler::greaterCount(key_ptr key){
-    return getGreaterCountIn(treeFile->header->rootPageId, key);
-}
-
 IndexScan IndexHandler::begin(){
     IndexScan ret(this);
     ret.setToBegin();
@@ -186,7 +178,7 @@ IndexScan IndexHandler::upperBound(key_ptr key){ //Weakly big
     IndexScan it = lowerBound(key);
     if(it.available()) {
         it.getKey(nowdata);
-        std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
+        // std::cout << "GET " << *(int*)nowdata << " " << *(int*)key << " " << compare(type, key, nowdata) << std::endl;
         if(compare(type, key, nowdata) == 1) it.nextKey();
     }
     else it.setToBegin();
@@ -294,6 +286,7 @@ void IndexHandler::removeIndex() {
 //     }
 //     treeFile->markPageDirty(index);
 // }
+
 void IndexHandler::insertIntoNonFullPage(key_ptr key,RID rid, int pageID){
     int index;
     BPlusNode* node = (BPlusNode*)(treeFile->getPage(pageID, index));
@@ -632,7 +625,7 @@ int IndexHandler::getCountIn(int pageID, key_ptr key){
             keyFile->getRecord(node->data[i].keyPos,nowdata);
             if(compare(type, key, nowdata) == 0) return node->data[i].count;
         }
-        return 0; //Maybe -1 is better here
+        return 0;
     } else if (node->nodeType == ix::NodeType::INTERNAL){
         int i = 1;
         for(; i<node->recs; i++){
@@ -642,58 +635,6 @@ int IndexHandler::getCountIn(int pageID, key_ptr key){
         i--;
         //std::cout<<i<<" " << node->data[i].value.pageID << std::endl;
         return getCountIn(node->data[i].value.pageID, key);
-    } 
-    return -1;
-}
-
-int IndexHandler::getLesserCountIn(int pageID, key_ptr key){
-    int tempIndex;
-    BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
-    int ret = 0;
-    if(node->nodeType == ix::NodeType::LEAF){
-        for(int i=0; i<node->recs; i++){
-            keyFile->getRecord(node->data[i].keyPos,nowdata);
-            if(compare(type, key, nowdata) <= 0) return ret;
-            ret += node->data[i].count;
-        }
-        return ret; //Maybe -1 is better here
-    } else if (node->nodeType == ix::NodeType::INTERNAL){
-        int i = 1;
-        for(; i<node->recs; i++){
-            keyFile->getRecord(node->data[i].keyPos,nowdata);
-            if(compare(type, key, nowdata) < 0) break;
-            ret += node->data[i].count;
-        }
-        i--;
-        ret -= node->data[i].count;
-        return ret + getLesserCountIn(node->data[i].value.pageID, key);
-    } 
-    return -1;
-}
-
-int IndexHandler::getGreaterCountIn(int pageID, key_ptr key){
-    int tempIndex;
-    BPlusNode* node = (BPlusNode*)treeFile->getPage(pageID, tempIndex);
-    int ret = 0;
-    if(node->nodeType == ix::NodeType::LEAF){
-        for(int i=node->recs-1; i>=0; i--){
-            keyFile->getRecord(node->data[i].keyPos,nowdata);
-            // unused variable
-            //int* nowd = (int*)nowdata;
-            if(compare(type, key, nowdata) >= 0) return ret;
-            ret += node->data[i].count;
-        }
-        return ret; //Maybe -1 is better here
-    } else if (node->nodeType == ix::NodeType::INTERNAL){
-        int i = 1;
-        for(; i<node->recs; i++){
-            keyFile->getRecord(node->data[i].keyPos,nowdata);
-            if(compare(type, key, nowdata) < 0) break;
-        }
-        i--;
-        for(int j=i+1; j<node->recs; j++)
-            ret += node->data[j].count;
-        return ret + getGreaterCountIn(node->data[i].value.pageID, key);
     } 
     return -1;
 }
