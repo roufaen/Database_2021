@@ -18,4 +18,6 @@ make
 cd src        # executive name is database2021
 ```
 
-此时， database2021 为可执行文件。在 data 目录下放置验收数据（因数据较大，仓库中把这些数据删除了），然后输入 sql 目录下的 create.sql 中的指令即可导入数据。
+此时， database2021 为可执行文件。
+
+在项目目录下新建 data 目录，并在其下放置验收数据，然后运行可执行文件并输入 sql 目录下的 create.sql 中的指令即可导入数据。
