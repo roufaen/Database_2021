@@ -64,7 +64,7 @@ cd src        # executive name is database2021
 
 ### 4.1. 文件系统 Buffer Manager
 
-该模块由下发的文件系统代码改造而成，采用哈希表结构存储文件页，调用系统文件读写函数完成文件读写，同时向上提供为不同文件分配文件页和存取文件页数据的功能。
+该模块由下发的文件系统代码改造而成，采用哈希表结构存储文件页，调用系统文件读写函数完成文件读写，同时向上提供为不同文件分配文件页和存取文件页数据的功能。文件系统通过改写，支持了将部分缓存页面（而非全部）写入文件的功能，使得接口的使用更具人性化。
 
 该模块主要接口和功能如下（未列出所有函数）。
 
@@ -132,7 +132,9 @@ class RecordHandler {
 
 ### 4.3. 索引模块 Index Handler
 
-索引管理模块内部维护了一个 B+ 树。为使得索引能够适应无 UNIQUE 约束， B+ 树中还有一类 Overflow 节点，用于存储同一键值的不同节点信息。该模块中，键值使用记录管理模块储存，因而具有较好的变长存储拓展性。
+索引管理模块内部维护了一个 B+ 树。为使得索引能够适应无 UNIQUE 约束， B+ 树中还有一类 Overflow 节点，用于存储同一键值的不同节点信息。该模块中，键值使用记录管理模块储存，因而具有较好的变长存储拓展性。除了基本的整型要求外，目前索引模块也支持浮点类型、字符串、日期等类型建立索引。
+
+索引模块还实现了一个访问迭代器IndexScan，使用该迭代器可以顺序遍历所有数据。我们依此实现了有索引情况下的高效访问。目前，我们测试的结果中有索引可以提高5倍的查询速度，在较大数据规模下，可以将查询时间从43s缩短至8s。
 
 该模块主要接口和功能如下（未列出所有函数）。
 
@@ -164,7 +166,7 @@ class IndexHandler{
     IndexScan greaterBound(key_ptr key);
     // 获得所有键值等于 key 的键值对对应的记录的位置
     std::vector<RID> getRIDs(key_ptr key);
-    // 获得键值对数量
+    // 获得键值对数量（索引中数据总量）
     inline int totalCount();
     // 关闭索引文件
     void closeIndex();
@@ -253,7 +255,18 @@ class QueryManager {
 
 ### 4.6. 查询解析模块 Parser
 
-#### TODO
+查询解析模块以ANTLR4生成的代码为基础，对SQLParser.h进行了少量的修改（对部分函数进行重写，使得可以支持更多功能）。我们实现了自己的Visitor类，Visitor类可以根据语法树的结构，获得输入的指令以及数据信息，从而正确地调用查询管理模块或者系统管理模块的接口。如果需要，查询解析模块还会将调用接口的返回值根据SQL的格式进行输出。
+
+本模块的接口为：
+
+```cpp
+// 给定输入的指令和数据库的相应模块指针，完成操作
+void parse(std::string sSQL, QueryManager* qm,  IndexHandler* ih, SystemManager* sm);
+```
+
+
+
+
 
 ### 4.7. 附加模块 Table
 
@@ -318,3 +331,8 @@ class NameHandler {
 
  - 2021 数据库大作业实验文档： https://thu-db.github.io/dbs-tutorial/ ；
  - 部分项目组织架构参考 2018 数据库大作业 by Zhengxiao Du and Yifan Wu ： https://github.com/duzx16/MyDB 。
+ - 索引部分的接口思路参考 2018数据库大作业 by solitaryzero: [solitaryzero/DatabaseProject: project for Tsinghua University database class 2018 (github.com)](https://github.com/solitaryzero/DatabaseProject)
+
+## 7. 感悟与收获
+总体来说，本次数据库实验中代码编程量大。我们也最大程度地利用了C++ OOP的特性，提供尽可能安全的接口，保证了效果最好的封装。
+但在编程过程中，我们也意识到在如此代码量的工程中，编程出现细小的bug是非常常见的，我们也有数处代码因为极小的偏差而出现了整体性的错误。而因为我们的其中一位组员直到1月7日才完成期末考试，我们很晚才意识到这些问题。因此尽早开启联调是十分必要的。
